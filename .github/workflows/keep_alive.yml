@@ -1,0 +1,14 @@
+name: Keep Alive Space
+
+on:
+  schedule:
+    - cron: '*/25 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping HF Space
+        run: |
+          curl -I https://huggingface.co/spaces/Qalam/Nuclear-Intelligence

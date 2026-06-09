@@ -1,7 +1,3 @@
-"""
-Nuclear Intelligence Operation Loop
-"""
-
 import asyncio
 import json
 import os
@@ -9,16 +5,14 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from dataclasses import asdict
-
 from loguru import logger
-
 from .nuclear_intelligence import (
     NuclearIntelligenceCore,
     ResearchQuestion,
     ResearchAnswer,
     EvaluationScore
 )
-from blockchain.virtual_ledger import VirtualLedger, TransactionType
+from blockchain.virtual_ledger import VirtualLedger
 
 class OperationLoopConfig:
     def __init__(self, config: Dict[str, Any]):
@@ -59,19 +53,27 @@ class OperationLoop:
             "errors": [],
             "status": "in_progress"
         }
-        
+
         try:
             questions = await self.ni_core.generate_complex_questions(num_questions=self.config.questions_per_cycle)
             cycle_report["questions"] = [asdict(q) for q in questions]
             self.execution_stats["total_questions_generated"] += len(questions)
 
+            total_acc = 0
+            acc_count = 0
+
             for question in questions:
                 try:
                     answer = await self.ni_core.conduct_deep_research(question)
                     evaluation_scores = await self.ni_core.evaluate_answer(answer)
+                    answer.evaluation_scores = evaluation_scores
                     
+                    cycle_report["answers"].append(asdict(answer))
                     cycle_report["evaluations"].append(evaluation_scores.dict())
                     
+                    total_acc += evaluation_scores.scientific_accuracy
+                    acc_count += 1
+
                     if (evaluation_scores.scientific_accuracy >= self.config.min_accuracy_threshold and
                         evaluation_scores.novelty_score >= self.config.min_novelty_threshold):
                         
@@ -91,17 +93,24 @@ class OperationLoop:
                     self.logger.error(f"Error in question processing: {e}")
                     cycle_report["errors"].append(str(e))
 
+            if acc_count > 0:
+                current_avg = total_acc / acc_count
+                prev_total = self.execution_stats["average_accuracy"] * (self.execution_stats["successful_cycles"])
+                self.execution_stats["average_accuracy"] = (prev_total + current_avg) / (self.execution_stats["successful_cycles"] + 1)
+
             self.ledger.mine_pending_block()
+            
             cycle_report["status"] = "completed"
             cycle_report["end_time"] = datetime.now().isoformat()
             self.execution_stats["successful_cycles"] += 1
             self.execution_stats["total_cycles"] += 1
             self.cycle_count += 1
             self.cycle_history.append(cycle_report)
-            
+
             # Save reports
-            os.makedirs("reports", exist_ok=True)
-            with open(f"reports/cycle_{self.cycle_count}.json", "w") as f:
+            reports_dir = Path("reports")
+            reports_dir.mkdir(exist_ok=True)
+            with open(reports_dir / f"cycle_{self.cycle_count}.json", "w") as f:
                 json.dump(cycle_report, f, indent=4)
             
             return cycle_report
@@ -110,7 +119,28 @@ class OperationLoop:
             cycle_report["status"] = "failed"
             cycle_report["errors"].append(str(e))
             self.execution_stats["failed_cycles"] += 1
+            self.execution_stats["total_cycles"] += 1
             return cycle_report
+
+    def generate_cycle_report(self, cycle_report: Dict[str, Any]) -> str:
+        report = f"### ⚛️ Nuclear Intelligence Cycle #{cycle_report['cycle_number']} Report\n\n"
+        report += f"**Status:** {cycle_report['status']}\n"
+        report += f"**Start Time:** {cycle_report['start_time']}\n"
+        report += f"**Questions Generated:** {len(cycle_report['questions'])}\n"
+        report += f"**NES Tokens Minted:** {len(cycle_report['tokens_minted'])}\n\n"
+        
+        if cycle_report.get('tokens_minted'):
+            report += "#### 🪙 Newly Minted NES Tokens:\n"
+            for mint in cycle_report['tokens_minted']:
+                token = mint['token_data']
+                report += f"- **Token ID:** {mint['tx_id'][:12]}... | **Accuracy:** {token['evaluation_scores']['scientific_accuracy']}% | **Novelty:** {token['evaluation_scores']['novelty_score']}%\n"
+        
+        if cycle_report.get('errors'):
+            report += "\n#### ⚠️ Errors Encountered:\n"
+            for error in cycle_report['errors']:
+                report += f"- {error}\n"
+                
+        return report
 
     async def run_continuous(self, max_cycles: Optional[int] = None) -> None:
         while max_cycles is None or self.cycle_count < max_cycles:

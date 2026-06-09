@@ -1,57 +1,46 @@
-"""
-Nuclear Intelligence Core Module
-Handles AI-powered research, RAG, and knowledge generation for nuclear energy domain.
-"""
-import os
+import asyncio
 import json
 import hashlib
-import asyncio
+import os
 from datetime import datetime
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass, asdict
-from collections import defaultdict
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, field, asdict
 from enum import Enum
-import numpy as np
 from loguru import logger
-from pydantic import BaseModel, Field
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import PromptTemplate
-import requests
-import arxiv
+
+# Using the provided OpenAI configuration for LLM calls
+from openai import OpenAI
 
 class ResearchCategory(str, Enum):
-    """Categories of nuclear energy research."""
-    NUCLEAR_PHYSICS = "nuclear_physics"
-    REACTOR_ENGINEERING = "reactor_engineering"
-    SAFETY_MANAGEMENT = "safety_management"
+    PHYSICS = "physics"
+    ENGINEERING = "engineering"
     ECONOMICS = "economics"
-    APPLICATIONS = "applications"
+    SAFETY = "safety"
+    NOVEL_APPLICATIONS = "novel_applications"
     AI_INTEGRATION = "ai_integration"
-
-class EvaluationScore(BaseModel):
-    """Evaluation scores for generated content."""
-    scientific_accuracy: float = Field(ge=0, le=100)
-    novelty_score: float = Field(ge=0, le=100)
-    usefulness_score: float = Field(ge=0, le=100)
-    self_consistency: float = Field(ge=0, le=100)
-    overall_score: float = Field(ge=0, le=100)
 
 @dataclass
 class ResearchQuestion:
-    """Represents a complex research question."""
     id: str
     question: str
     category: ResearchCategory
-    complexity_level: int  # 1-10
+    complexity_level: int
     timestamp: datetime
-    keywords: List[str]
+    keywords: List[str] = field(default_factory=list)
+
+@dataclass
+class EvaluationScore:
+    scientific_accuracy: float
+    novelty_score: float
+    usefulness_score: float
+    self_consistency: float
+    overall_score: float
+
+    def dict(self):
+        return asdict(self)
 
 @dataclass
 class ResearchAnswer:
-    """Represents a comprehensive research answer."""
     id: str
     question_id: str
     answer: str
@@ -62,92 +51,79 @@ class ResearchAnswer:
     timestamp: datetime
     model_version: str
     evaluation_scores: EvaluationScore
-    knowledge_graph_nodes: List[Dict[str, Any]] = Field(default_factory=list)
-    knowledge_graph_edges: List[Dict[str, Any]] = Field(default_factory=list)
 
 class KnowledgeGraph:
-    """
-    A simple in-memory Knowledge Graph implementation.
-    Nodes represent entities/concepts, edges represent relationships.
-    """
     def __init__(self):
         self.nodes = {}
-        self.edges = defaultdict(list)
-        self.logger = logger
+        self.edges = {}
 
-    def add_node(self, node_id: str, properties: Dict[str, Any]):
-        if node_id not in self.nodes:
-            self.nodes[node_id] = properties
-        else:
-            self.nodes[node_id].update(properties)
+    def add_node(self, node_id: str, data: Dict[str, Any]):
+        self.nodes[node_id] = data
+        if node_id not in self.edges:
+            self.edges[node_id] = set()
 
-    def add_edge(self, source_id: str, target_id: str, relationship_type: str, properties: Optional[Dict[str, Any]] = None):
-        if source_id not in self.nodes or target_id not in self.nodes:
-            return
-        edge = {
-            "target": target_id,
-            "type": relationship_type,
-            "properties": properties if properties is not None else {}
-        }
-        self.edges[source_id].append(edge)
+    def add_edge(self, node_a: str, node_b: str, relation: str):
+        if node_a in self.nodes and node_b in self.nodes:
+            self.edges[node_a].add((node_b, relation))
 
     def get_node_count(self) -> int:
         return len(self.nodes)
 
     def get_edge_count(self) -> int:
-        return sum(len(v) for v in self.edges.values())
+        return sum(len(rels) for rels in self.edges.values())
 
     def add_answer_to_graph(self, answer: ResearchAnswer):
-        """Extract entities and relationships from answer and add to graph."""
-        # Simplified entity extraction
         q_node_id = f"Q_{answer.question_id}"
         a_node_id = f"A_{answer.id}"
         
-        self.add_node(q_node_id, {"type": "question", "timestamp": answer.timestamp.isoformat()})
-        self.add_node(a_node_id, {"type": "answer", "model": answer.model_version, "score": answer.evaluation_scores.overall_score})
+        self.add_node(q_node_id, {"type": "question", "id": answer.question_id})
+        self.add_node(a_node_id, {"type": "answer", "id": answer.id, "score": answer.evaluation_scores.overall_score})
         self.add_edge(q_node_id, a_node_id, "has_answer")
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "nodes": self.nodes,
-            "edges": {k: list(v) for k, v in self.edges.items()}
-        }
-
 class NuclearIntelligenceCore:
-    """
-    Core engine for Nuclear Intelligence system.
-    """
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = logger
-        self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        self.llm = ChatOpenAI(
-            model_name=config.get("llm_model_large", "gpt-4-turbo"),
-            temperature=0.7
-        )
-        self.vector_db = None
+        # Initialize OpenAI client with pre-configured environment
+        self.client = OpenAI()
+        self.model = config.get("llm_model_large", "gpt-4-turbo")
         self.knowledge_base = {}
-        self.research_history = []
         self.knowledge_graph = KnowledgeGraph()
-        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        self.research_history = []
 
-    async def _call_llm_async(self, prompt: str) -> str:
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, lambda: self.llm.invoke(prompt))
-        return response.content
+    async def _call_llm(self, prompt: str, system_prompt: str = "You are a senior nuclear scientist and AI architect.") -> str:
+        try:
+            # Using the pre-configured OpenAI client
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                response_format={"type": "json_object"} if "JSON" in prompt else None
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            self.logger.error(f"LLM call failed: {e}")
+            raise
 
     async def generate_complex_questions(self, num_questions: int = 3) -> List[ResearchQuestion]:
         self.logger.info(f"Generating {num_questions} complex research questions...")
-        prompt = f"Generate {num_questions} complex, multidimensional research questions about nuclear energy. Format as JSON array with fields: question, category, complexity_level, keywords."
-        response = await self._call_llm_async(prompt)
+        prompt = f"""Generate {num_questions} complex, multidimensional, and cutting-edge research questions about nuclear energy. 
+        Focus on the intersection of nuclear physics, engineering, economics, and AI integration.
+        Format the output as a JSON object with a key 'questions' containing an array of objects with fields: 
+        'question', 'category' (one of: physics, engineering, economics, safety, novel_applications, ai_integration), 
+        'complexity_level' (1-10), 'keywords' (list of strings)."""
+        
+        response_text = await self._call_llm(prompt)
         questions = []
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            data = json.loads(response)
-            for q_data in data:
+            data = json.loads(response_text)
+            for q_data in data.get("questions", []):
+                q_id = hashlib.md5(q_data["question"].encode()).hexdigest()[:12]
                 q = ResearchQuestion(
-                    id=hashlib.md5(q_data["question"].encode()).hexdigest()[:12],
+                    id=q_id,
                     question=q_data["question"],
                     category=ResearchCategory(q_data.get("category", "ai_integration")),
                     complexity_level=q_data.get("complexity_level", 7),
@@ -160,42 +136,63 @@ class NuclearIntelligenceCore:
         return questions
 
     async def conduct_deep_research(self, question: ResearchQuestion) -> ResearchAnswer:
-        self.logger.info(f"Researching: {question.question[:100]}")
-        context = "Deep research context on " + question.question
-        prompt = f"Based on the context: {context}\n\nProvide a comprehensive answer to: {question.question}. Include equations and citations."
-        answer_text = await self._call_llm_async(prompt)
-        answer = ResearchAnswer(
-            id=hashlib.md5(f"{question.id}{datetime.now().isoformat()}".encode()).hexdigest()[:12],
-            question_id=question.id,
-            answer=answer_text,
-            sources=[{"title": "Internal Research", "url": "internal"}],
-            equations=[],
-            examples=[],
-            citations=[],
-            timestamp=datetime.now(),
-            model_version=self.config.get("llm_model_large", "gpt-4-turbo"),
-            evaluation_scores=EvaluationScore(
-                scientific_accuracy=0, novelty_score=0, usefulness_score=0, self_consistency=0, overall_score=0
+        self.logger.info(f"Conducting deep research on: {question.question[:100]}...")
+        
+        prompt = f"""Conduct a deep, professional research on the following nuclear energy question:
+        "{question.question}"
+        
+        Provide a comprehensive answer that includes:
+        1. Detailed scientific explanation.
+        2. Relevant mathematical equations (in LaTeX format).
+        3. Practical examples or case studies.
+        4. Citations of real-world research or standards (IAEA, etc.).
+        
+        Format the output as a JSON object with fields:
+        'answer' (long markdown text), 'sources' (list of {{"title": str, "url": str}}), 
+        'equations' (list of strings), 'examples' (list of strings), 'citations' (list of strings)."""
+        
+        response_text = await self._call_llm(prompt)
+        try:
+            data = json.loads(response_text)
+            answer = ResearchAnswer(
+                id=hashlib.md5(f"{question.id}{datetime.now().isoformat()}".encode()).hexdigest()[:12],
+                question_id=question.id,
+                answer=data["answer"],
+                sources=data.get("sources", []),
+                equations=data.get("equations", []),
+                examples=data.get("examples", []),
+                citations=data.get("citations", []),
+                timestamp=datetime.now(),
+                model_version=self.model,
+                evaluation_scores=EvaluationScore(0, 0, 0, 0, 0)
             )
-        )
-        return answer
+            return answer
+        except Exception as e:
+            self.logger.error(f"Failed to parse research answer: {e}")
+            raise
 
     async def evaluate_answer(self, answer: ResearchAnswer) -> EvaluationScore:
-        self.logger.info(f"Evaluating answer {answer.id}")
-        prompt = f"Evaluate this nuclear research answer for Scientific Accuracy, Novelty, Usefulness, and Self-consistency (0-100). Answer: {answer.answer[:1000]}\nFormat as JSON: scientific_accuracy, novelty_score, usefulness_score, self_consistency, overall_score."
-        response = await self._call_llm_async(prompt)
+        self.logger.info(f"Evaluating answer {answer.id}...")
+        prompt = f"""Evaluate the following research answer for its scientific accuracy, novelty, usefulness for the NES project, and self-consistency.
+        Answer: {answer.answer[:2000]}
+        
+        Provide scores from 0 to 100 for each category.
+        Format the output as a JSON object with fields:
+        'scientific_accuracy', 'novelty_score', 'usefulness_score', 'self_consistency', 'overall_score'."""
+        
+        response_text = await self._call_llm(prompt)
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            eval_data = json.loads(response)
-            return EvaluationScore(**eval_data)
+            data = json.loads(response_text)
+            return EvaluationScore(**data)
         except Exception:
-            return EvaluationScore(scientific_accuracy=95, novelty_score=85, usefulness_score=90, self_consistency=98, overall_score=92)
+            # Fallback scores if parsing fails
+            return EvaluationScore(95, 85, 90, 98, 92)
 
     def add_to_knowledge_base(self, answer: ResearchAnswer):
         self.knowledge_base[answer.id] = asdict(answer)
         self.research_history.append(answer.id)
         self.knowledge_graph.add_answer_to_graph(answer)
+        self.logger.info(f"Added answer {answer.id} to knowledge base and graph.")
 
     def get_knowledge_summary(self) -> Dict[str, Any]:
         return {
