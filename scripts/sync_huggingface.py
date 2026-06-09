@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from loguru import logger
 
 try:
-    from huggingface_hub import HfApi, Repository
+    from huggingface_hub import HfApi
 except ImportError:
     logger.warning("huggingface_hub not installed, skipping HF sync")
     sys.exit(0)
