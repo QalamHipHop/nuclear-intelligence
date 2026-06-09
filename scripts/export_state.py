@@ -35,7 +35,7 @@ def main():
                 "pending_transactions": [tx.to_dict() for tx in ledger.pending_transactions],
                 "nes_supply": ledger.nes_supply
             },
-            "knowledge_graph_state": ni_core.knowledge_graph.graph
+            "knowledge_graph_state": ni_core.kg.graph
         }
         
         # Save to file
@@ -49,7 +49,7 @@ def main():
         
         logging.info(f"System state exported to {export_file}")
         blocks_count = len(export_data["blockchain_state"]["chain"])
-        kg_entities_count = sum(len(v) for v in export_data["knowledge_graph_state"].values())
+        kg_entities_count = len(export_data["knowledge_graph_state"].get("entities", {}))
         logging.info(f"Blockchain blocks: {blocks_count}")
         logging.info(f"Knowledge graph entities: {kg_entities_count}")
         

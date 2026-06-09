@@ -18,6 +18,8 @@ core = NuclearIntelligenceCore()
 ledger = VirtualLedger()
 op_loop = OperationLoop(core, ledger)
 
+__all__ = ['demo', 'core', 'ledger', 'op_loop']
+
 def run_manual_cycle():
     try:
         result = op_loop.run_cycle()

@@ -3,9 +3,7 @@ title: Nuclear Intelligence
 emoji: ⚛️
 colorFrom: blue
 colorTo: green
-sdk: gradio
-sdk_version: 4.36.1
-app_file: api/main.py
+sdk: docker
 pinned: false
 license: mit
 ---

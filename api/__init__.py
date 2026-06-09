@@ -1,5 +1,5 @@
 """Nuclear Intelligence API Module"""
 
-from .main import app
+from .enhanced_api import app
 
 __all__ = ["app"]

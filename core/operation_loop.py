@@ -2,7 +2,7 @@
 import time
 import os
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -63,8 +63,8 @@ class OperationLoop:
                 self.core.integrate_knowledge(question, answer, evaluation)
                 
                 metadata = {
-                    "question": question.dict(),
-                    "evaluation": evaluation.dict(),
+                    "question": question.model_dump(),
+                    "evaluation": evaluation.model_dump(),
                     "summary": answer.answer[:500]
                 }
                 self.ledger.mint_nes_token(metadata)
@@ -96,7 +96,7 @@ class OperationLoop:
         os.makedirs(report_dir, exist_ok=True)
         filename = f"{report_dir}/cycle_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write(result.json(indent=4))
+            f.write(result.model_dump_json(indent=4))
 
     def start(self):
         self.is_running = True
@@ -113,5 +113,3 @@ class OperationLoop:
     def stop(self):
         self.is_running = False
         logger.info("Operation loop stopped.")
-
-from typing import Optional

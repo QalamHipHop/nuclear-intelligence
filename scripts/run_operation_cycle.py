@@ -42,9 +42,8 @@ def main():
 
         # Configure the operation loop
         op_config = OperationLoopConfig(
-            question_generation_context=os.getenv("QUESTION_GENERATION_CONTEXT", "Focus on advanced nuclear reactor designs and their economic implications."),
-            min_scientific_accuracy=float(os.getenv("MIN_SCIENTIFIC_ACCURACY", "93.0")),
-            loop_interval_seconds=int(os.getenv("LOOP_INTERVAL_SECONDS", "1800"))
+            min_accuracy=float(os.getenv("MIN_SCIENTIFIC_ACCURACY", "93.0")),
+            interval_minutes=int(os.getenv("LOOP_INTERVAL_MINUTES", "30"))
         )
         
         logging.info("Initializing Operation Loop...")
@@ -52,7 +51,7 @@ def main():
         
         # Execute one cycle
         logging.info("Executing operation cycle...")
-        operation_loop.run_single_cycle()
+        operation_loop.run_cycle()
         
         logging.info("Operation cycle completed successfully.")
         logging.info(f"End time: {datetime.now().isoformat()}")

@@ -2,6 +2,7 @@
 import os
 import json
 import time
+import hashlib
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from loguru import logger
@@ -146,5 +147,3 @@ class NuclearIntelligenceCore:
             "accuracy": evaluation.scientific_accuracy
         })
         logger.info(f"Knowledge integrated for: {question.question[:50]}...")
-
-import hashlib
