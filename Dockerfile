@@ -5,19 +5,18 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    software-properties-common \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements_enhanced.txt .
+RUN pip3 install --no-cache-dir -r requirements_enhanced.txt
 
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p logs reports exports
+# Expose ports for FastAPI and Gradio
+EXPOSE 8000
+EXPOSE 7860
 
-# Expose ports
-EXPOSE 8000 7860
-
-# Start both FastAPI and Gradio
-CMD ["sh", "-c", "python api/main.py & python app.py"]
+# Command to run the Gradio UI by default
+CMD ["python3", "app_enhanced.py"]
