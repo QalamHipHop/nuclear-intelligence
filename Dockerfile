@@ -1,10 +1,12 @@
-FROM python:3.11
+FROM python:3.11-slim
 
-WORKDIR /code
+WORKDIR /app
 
-COPY ./requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "app.py"]
+EXPOSE 7860
+
+CMD ["python", "api/main.py"]

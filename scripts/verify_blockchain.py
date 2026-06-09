@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 Verify blockchain integrity and consistency.
@@ -5,41 +6,41 @@ Verify blockchain integrity and consistency.
 
 import sys
 import json
+import logging
 from pathlib import Path
 
+# Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from loguru import logger
 from blockchain.virtual_ledger import VirtualLedger
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def main():
     """Verify blockchain integrity."""
-    logger.info("Starting blockchain verification...")
+    logging.info("Starting blockchain verification...")
     
-    config = {
-        "blockchain_secret": "nuclear-intelligence-secret"
-    }
-    
-    ledger = VirtualLedger(config)
-    
-    # Verify chain integrity
-    is_valid = ledger.verify_chain_integrity()
-    
-    # Get chain state
-    chain_state = ledger.get_chain_state()
-    
-    logger.info(f"Blockchain Integrity: {'✓ VALID' if is_valid else '✗ INVALID'}")
-    logger.info(f"Chain length: {chain_state['chain_length']}")
-    logger.info(f"Pending transactions: {chain_state['pending_transactions']}")
-    logger.info(f"Total NES minted: {chain_state['total_nes_minted']}")
-    
-    if not is_valid:
-        logger.error("Blockchain integrity check failed!")
+    try:
+        ledger = VirtualLedger()
+        
+        # Verify chain integrity
+        is_valid = ledger.is_chain_valid()
+        
+        logging.info(f"Blockchain Integrity: {"✓ VALID" if is_valid else "✗ INVALID"}")
+        logging.info(f"Chain length: {len(ledger.chain)}")
+        logging.info(f"Pending transactions: {len(ledger.pending_transactions)}")
+        logging.info(f"Total NES minted: {ledger.nes_supply}")
+        
+        if not is_valid:
+            logging.error("Blockchain integrity check failed!")
+            return 1
+        
+        logging.info("Blockchain verification completed successfully!")
+        return 0
+        
+    except Exception as e:
+        logging.error(f"Critical error during blockchain verification: {e}", exc_info=True)
         return 1
-    
-    logger.info("Blockchain verification completed successfully!")
-    return 0
 
 
 if __name__ == "__main__":
