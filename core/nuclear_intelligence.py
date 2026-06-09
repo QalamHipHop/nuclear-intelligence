@@ -2,7 +2,6 @@
 Nuclear Intelligence Core Module
 Handles AI-powered research, RAG, and knowledge generation for nuclear energy domain.
 """
-
 import os
 import json
 import hashlib
@@ -12,16 +11,14 @@ from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, asdict
 from collections import defaultdict
 from enum import Enum
-
 import numpy as np
 from loguru import logger
 from pydantic import BaseModel, Field
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
+from langchain_core.prompts import PromptTemplate
 import requests
 import arxiv
 
@@ -101,19 +98,16 @@ class KnowledgeGraph:
         return sum(len(v) for v in self.edges.values())
 
     def add_answer_to_graph(self, answer: ResearchAnswer):
-        answer_node_id = f"answer_{answer.id}"
-        self.add_node(answer_node_id, {
-            "type": "ResearchAnswer",
-            "question_id": answer.question_id,
-            "timestamp": answer.timestamp.isoformat(),
-            "scientific_accuracy": answer.evaluation_scores.scientific_accuracy
-        })
+        """Extract entities and relationships from answer and add to graph."""
+        # Simplified entity extraction
+        q_node_id = f"Q_{answer.question_id}"
+        a_node_id = f"A_{answer.id}"
         
-        question_node_id = f"question_{answer.question_id}"
-        self.add_node(question_node_id, {"type": "ResearchQuestion"})
-        self.add_edge(question_node_id, answer_node_id, "HAS_ANSWER")
+        self.add_node(q_node_id, {"type": "question", "timestamp": answer.timestamp.isoformat()})
+        self.add_node(a_node_id, {"type": "answer", "model": answer.model_version, "score": answer.evaluation_scores.overall_score})
+        self.add_edge(q_node_id, a_node_id, "has_answer")
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "nodes": self.nodes,
             "edges": {k: list(v) for k, v in self.edges.items()}
@@ -148,7 +142,6 @@ class NuclearIntelligenceCore:
         response = await self._call_llm_async(prompt)
         questions = []
         try:
-            # Clean response if needed
             if "```json" in response:
                 response = response.split("```json")[1].split("```")[0].strip()
             data = json.loads(response)
@@ -168,11 +161,9 @@ class NuclearIntelligenceCore:
 
     async def conduct_deep_research(self, question: ResearchQuestion) -> ResearchAnswer:
         self.logger.info(f"Researching: {question.question[:100]}")
-        # Simplified research context for now
         context = "Deep research context on " + question.question
         prompt = f"Based on the context: {context}\n\nProvide a comprehensive answer to: {question.question}. Include equations and citations."
         answer_text = await self._call_llm_async(prompt)
-        
         answer = ResearchAnswer(
             id=hashlib.md5(f"{question.id}{datetime.now().isoformat()}".encode()).hexdigest()[:12],
             question_id=question.id,
