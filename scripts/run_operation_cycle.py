@@ -42,8 +42,8 @@ def main():
 
         # Configure the operation loop
         op_config = OperationLoopConfig(
-            min_accuracy=float(os.getenv("MIN_SCIENTIFIC_ACCURACY", "93.0")),
-            interval_minutes=int(os.getenv("LOOP_INTERVAL_MINUTES", "30"))
+            min_accuracy=float(os.getenv("SCIENTIFIC_ACCURACY_THRESHOLD", "93.0")),
+            interval_minutes=int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", "30"))
         )
         
         logging.info("Initializing Operation Loop...")

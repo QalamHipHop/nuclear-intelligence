@@ -50,9 +50,15 @@ matplotlib==3.8.2
 
 # Hugging Face Integration
 huggingface-hub==0.19.4
-huggingface-datasets==2.16.1
+datasets==2.16.1
 
 # Utilities
 tenacity==8.2.3
 tqdm==4.66.1
 loguru==0.7.2
+
+# Audio and System
+pydub>=0.25.1
+PyAudio>=0.2.13
+audioop-lts>=0.2.1  # For Python 3.13 compatibility
+pyaudioop-compatible>=1.0.0; python_version >= "3.13"

@@ -14,9 +14,18 @@ from core.operation_loop import OperationLoop, OperationLoopConfig
 
 # Initialize System
 logger.info("Initializing Nuclear Intelligence System...")
+
+# Load configuration from environment
+accuracy_threshold = float(os.getenv("SCIENTIFIC_ACCURACY_THRESHOLD", 93.0))
+loop_interval = int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", 30))
+
 core = NuclearIntelligenceCore()
 ledger = VirtualLedger()
-op_loop = OperationLoop(core, ledger)
+config = OperationLoopConfig(
+    min_accuracy=accuracy_threshold,
+    interval_minutes=loop_interval
+)
+op_loop = OperationLoop(core, ledger, config=config)
 
 __all__ = ['demo', 'core', 'ledger', 'op_loop']
 

@@ -231,11 +231,12 @@ nuclear-intelligence/
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `HF_TOKEN` | Hugging Face API token | - |
+| `HF_TOKEN` | Hugging Face API token (fallback: `HUGGINGFACE_API_KEY`) | - |
 | `GITHUB_TOKEN` | GitHub personal access token | - |
 | `OPENAI_API_KEY` | OpenAI API key | - |
-| `LLM_MODEL_LARGE` | Large LLM model | gpt-4-turbo |
-| `SCHEDULER_INTERVAL_MINUTES` | Operation loop interval | 45 |
+| `LLM_MODEL` | Large LLM model | gpt-4-turbo |
+| `OPERATION_LOOP_INTERVAL_MINUTES` | Operation loop interval | 30 |
+| `SCIENTIFIC_ACCURACY_THRESHOLD` | Min accuracy for minting | 93 |
 | `FEATURE_HUMAN_IN_THE_LOOP` | Enable human review | true |
 | `API_HOST` | API server host | 0.0.0.0 |
 | `API_PORT` | API server port | 8000 |

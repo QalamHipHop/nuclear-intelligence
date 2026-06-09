@@ -5,7 +5,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-URL = "https://huggingface.co/spaces/Qalam/Nuclear-Intelligence"
+import os
+URL = os.getenv("SPACE_URL", "https://huggingface.co/spaces/Qalam/Nuclear-Intelligence")
 
 def ping_space():
     try:

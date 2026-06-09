@@ -24,9 +24,9 @@ def main():
     """Sync with Hugging Face."""
     logger.info("Starting Hugging Face synchronization...")
     
-    hf_token = os.getenv("HF_TOKEN")
+    hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_KEY")
     if not hf_token:
-        logger.warning("HF_TOKEN not set, skipping sync")
+        logger.warning("HF_TOKEN or HUGGINGFACE_API_KEY not set, skipping sync")
         return 0
     
     try:

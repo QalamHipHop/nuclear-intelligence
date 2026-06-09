@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libportaudiocpp0 \
     portaudio19-dev \
     ffmpeg \
+    libavcodec-extra \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install

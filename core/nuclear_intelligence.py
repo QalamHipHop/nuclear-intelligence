@@ -71,9 +71,10 @@ class KnowledgeGraph:
 class NuclearIntelligenceCore:
     def __init__(
         self,
-        model_name: str = "gpt-4o",
+        model_name: str = None,
         vector_db_path: str = "knowledge_base/faiss_index"
     ):
+        model_name = model_name or os.getenv("LLM_MODEL", "gpt-4o")
         self.llm = ChatOpenAI(model=model_name, temperature=0.7)
         self.embeddings = OpenAIEmbeddings()
         self.vector_db_path = vector_db_path
