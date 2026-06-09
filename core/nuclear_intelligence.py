@@ -10,6 +10,7 @@ import asyncio
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, asdict
+from collections import defaultdict
 from enum import Enum
 
 import numpy as np
@@ -23,6 +24,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 import requests
 import arxiv
+from .. import default_api # Import the default_api for search tool
 
 
 class ResearchCategory(str, Enum):
@@ -68,6 +70,124 @@ class ResearchAnswer:
     timestamp: datetime
     model_version: str
     evaluation_scores: EvaluationScore
+    knowledge_graph_nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    knowledge_graph_edges: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class KnowledgeGraph:
+    """
+    A simple in-memory Knowledge Graph implementation.
+    Nodes represent entities/concepts, edges represent relationships.
+    """
+    def __init__(self):
+        self.nodes = {}
+        self.edges = defaultdict(list)
+        self.logger = logger
+
+    def add_node(self, node_id: str, properties: Dict[str, Any]):
+        if node_id not in self.nodes:
+            self.nodes[node_id] = properties
+            self.logger.debug(f"Added node: {node_id} with properties {properties}")
+        else:
+            self.nodes[node_id].update(properties)
+            self.logger.debug(f"Updated node: {node_id} with properties {properties}")
+
+    def add_edge(self, source_id: str, target_id: str, relationship_type: str, properties: Optional[Dict[str, Any]] = None):
+        if source_id not in self.nodes:
+            self.logger.warning(f"Source node {source_id} not found. Cannot add edge.")
+            return
+        if target_id not in self.nodes:
+            self.logger.warning(f"Target node {target_id} not found. Cannot add edge.")
+            return
+        
+        edge = {
+            "target": target_id,
+            "type": relationship_type,
+            "properties": properties if properties is not None else {}
+        }
+        self.edges[source_id].append(edge)
+        self.logger.debug(f"Added edge from {source_id} to {target_id} of type {relationship_type}")
+
+    def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:
+        return self.nodes.get(node_id)
+
+    def get_edges(self, node_id: str) -> List[Dict[str, Any]]:
+        return self.edges.get(node_id, [])
+
+    def add_answer_to_graph(self, answer: ResearchAnswer):
+        """Extract entities and relationships from a ResearchAnswer and add to graph."""
+        self.logger.info(f"Adding answer {answer.id} to knowledge graph...")
+        
+        # Add the answer itself as a node
+        answer_node_id = f"answer_{answer.id}"
+        self.add_node(answer_node_id, {
+            "type": "ResearchAnswer",
+            "question_id": answer.question_id,
+            "summary": answer.answer[:200] + "...",
+            "timestamp": answer.timestamp.isoformat(),
+            "model_version": answer.model_version,
+            "scientific_accuracy": answer.evaluation_scores.scientific_accuracy
+        })
+        
+        # Add the question as a node and link it
+        question_node_id = f"question_{answer.question_id}"
+        self.add_node(question_node_id, {
+            "type": "ResearchQuestion",
+            "question_text": answer.question_id, # This should be the actual question text, not ID
+            "timestamp": answer.timestamp.isoformat()
+        })
+        self.add_edge(question_node_id, answer_node_id, "HAS_ANSWER")
+        self.add_edge(answer_node_id, question_node_id, "ANSWERS")
+
+        # Extract entities from the answer text and link them
+        # This is a simplified entity extraction. A more advanced version would use NLP.
+        entities = self._extract_entities_from_text(answer.answer)
+        for entity_name, entity_type in entities:
+            entity_id = f"entity_{hashlib.md5(entity_name.encode()).hexdigest()[:8]}"
+            self.add_node(entity_id, {"type": entity_type, "name": entity_name})
+            self.add_edge(answer_node_id, entity_id, "MENTIONS")
+            self.add_edge(entity_id, answer_node_id, "MENTIONED_IN")
+
+        # Link sources
+        for source in answer.sources:
+            source_id = f"source_{hashlib.md5(source['url'].encode()).hexdigest()[:8]}"
+            self.add_node(source_id, {"type": source['type'], "title": source['title'], "url": source['url']})
+            self.add_edge(answer_node_id, source_id, "CITED_FROM")
+            self.add_edge(source_id, answer_node_id, "CITES")
+
+    def _extract_entities_from_text(self, text: str) -> List[Tuple[str, str]]:
+        """A placeholder for entity extraction from text."""
+        # In a real system, this would use NER (Named Entity Recognition)
+        # For now, we can look for some keywords or use a simple regex.
+        entities = []
+        # Example: look for capitalized words that are not at the beginning of a sentence
+        import re
+        potential_entities = re.findall(r'\b[A-Z][a-z0-9]+(?:\s[A-Z][a-z0-9]+)*\b', text)
+        for pe in potential_entities:
+            if len(pe.split()) > 1 or pe.lower() not in ["the", "a", "an", "and", "or", "but", "for", "nor", "so", "yet", "in", "on", "at", "by", "with", "from", "of", "to", "is", "are", "was", "were", "be", "been", "being"]:
+                entities.append((pe, "Concept"))
+        return list(set(entities)) # Return unique entities
+
+    def to_json(self) -> Dict[str, Any]:
+        """Serialize the knowledge graph to a JSON-compatible dictionary."""
+        return {
+            "nodes": self.nodes,
+            "edges": {k: list(v) for k, v in self.edges.items()}
+        }
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        """Deserialize the knowledge graph from a JSON-compatible dictionary."""
+        graph = cls()
+        graph.nodes = data.get("nodes", {})
+        graph.edges = defaultdict(list, {k: v for k, v in data.get("edges", {}).items()})
+        return graph
+
+    def get_node_count(self) -> int:
+        return len(self.nodes)
+
+    def get_edge_count(self) -> int:
+        return sum(len(v) for v in self.edges.values())
 
 
 class NuclearIntelligenceCore:
@@ -97,6 +217,7 @@ class NuclearIntelligenceCore:
         self.vector_db = None
         self.knowledge_base = {}
         self.research_history = []
+        self.knowledge_graph = KnowledgeGraph()
         
         # Initialize text splitter
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -330,9 +451,15 @@ class NuclearIntelligenceCore:
     async def _web_search(self, query: str) -> List[Dict]:
         """Perform web search for current information."""
         self.logger.info(f"Performing web search for: {query[:100]}")
-        # Placeholder for web search implementation
-        # Would integrate with search API (Google, Bing, etc.)
-        return []
+        try:
+            search_results = default_api.search(brief="Perform web search for current information.", type="info", queries=[query])
+            web_results = []
+            for result in search_results.get("results", []):
+                web_results.append({"title": result.get("title"), "url": result.get("url"), "snippet": result.get("snippet")})
+            return web_results
+        except Exception as e:
+            self.logger.error(f"Error performing web search: {e}")
+            return []
 
     def _prepare_research_context(self, docs: List, papers: List, web_results: List) -> str:
         """Prepare combined research context."""
@@ -340,11 +467,15 @@ class NuclearIntelligenceCore:
         for doc in docs[:3]:
             context += f"- {doc.get('content', '')[:200]}...\n"
         
-        context += "\n## Recent ArXiv Papers\n"
+                context += "\n## Recent ArXiv Papers\n"
         for paper in papers[:3]:
             context += f"- **{paper['title']}** ({paper['published']})\n"
             context += f"  {paper['summary'][:200]}...\n"
         
+        context += "\n## Web Search Results\n"
+        for result in web_results[:3]:
+            context += f"- **{result['title']}** ({result['url']})\n"
+            context += f"  {result['snippet'][:200]}...\n"
         return context
 
     def _extract_equations(self, text: str) -> List[str]:
@@ -378,14 +509,20 @@ class NuclearIntelligenceCore:
         """Format all sources into a unified structure."""
         sources = []
         
-        for paper in papers:
+                for paper in papers:
             sources.append({
                 "type": "arxiv",
                 "title": paper["title"],
                 "url": paper["url"],
                 "authors": ", ".join(paper["authors"][:3])
             })
-        
+        for result in web_results:
+            sources.append({
+                "type": "web",
+                "title": result["title"],
+                "url": result["url"],
+                "snippet": result["snippet"]
+            })
         return sources
 
     async def _evaluate_metric(self, prompt: PromptTemplate, content: str) -> float:
@@ -429,6 +566,9 @@ class NuclearIntelligenceCore:
         self.knowledge_base[answer.id] = asdict(answer)
         self.research_history.append(answer.id)
         
+        # Add answer content to knowledge graph
+        self.knowledge_graph.add_answer_to_graph(answer)
+        
         # Update vector database
         if self.vector_db is not None:
             try:
@@ -443,5 +583,7 @@ class NuclearIntelligenceCore:
             "total_answers": len(self.knowledge_base),
             "research_history_length": len(self.research_history),
             "categories": list(set([ResearchCategory.AI_INTEGRATION.value])),
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
+            "knowledge_graph_nodes": self.knowledge_graph.get_node_count(),
+            "knowledge_graph_edges": self.knowledge_graph.get_edge_count()
         }

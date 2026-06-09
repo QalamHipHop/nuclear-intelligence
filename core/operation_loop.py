@@ -12,6 +12,7 @@ import asyncio
 import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
+from pathlib import Path
 from dataclasses import asdict
 
 from loguru import logger
@@ -225,6 +226,22 @@ class OperationLoop:
                 self.execution_stats["average_accuracy"] = avg_accuracy
             
             self.cycle_history.append(cycle_report)
+            
+            # Save cycle report to file
+            reports_dir = Path("reports")
+            reports_dir.mkdir(exist_ok=True)
+            report_filename = reports_dir / f"cycle_report_{cycle_report["cycle_number"]}_{datetime.now().strftime("%Y%m%d%H%M%S")}.json"
+            with open(report_filename, "w") as f:
+                json.dump(cycle_report, f, indent=4)
+            self.logger.info(f"Cycle report saved to {report_filename}")
+
+            # Export blockchain ledger
+            exports_dir = Path("exports")
+            exports_dir.mkdir(exist_ok=True)
+            ledger_filename = exports_dir / f"blockchain_export_{datetime.now().strftime("%Y%m%d%H%M%S")}.json"
+            with open(ledger_filename, "w") as f:
+                json.dump(self.ledger.export_ledger(), f, indent=4)
+            self.logger.info(f"Blockchain ledger exported to {ledger_filename}")
             self.cycle_count += 1
             
             self.logger.info(f"Operation cycle #{self.cycle_count} completed successfully")

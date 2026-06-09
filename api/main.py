@@ -16,6 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from loguru import logger
 import uvicorn
+import gradio as gr
+from app import demo as gradio_app
 
 # Import core modules
 import sys
@@ -76,6 +78,9 @@ app = FastAPI(
     description="AI-powered nuclear energy research and NES token system",
     version="0.1.0"
 )
+
+# Mount Gradio app
+app.mount("/gradio", gr.routes.App.create_app(gradio_app))
 
 # Add CORS middleware
 app.add_middleware(

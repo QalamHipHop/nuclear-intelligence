@@ -1,3 +1,15 @@
+---
+title: Nuclear Intelligence
+emoji: ⚛️
+colorFrom: blue
+colorTo: green
+sdk: gradio
+sdk_version: 4.36.1
+app_file: api/main.py
+pinned: false
+license: mit
+---
+
 # Nuclear Intelligence 🧬⚛️
 
 **AI-Powered Nuclear Energy Research & Blockchain-Based NES Token System**

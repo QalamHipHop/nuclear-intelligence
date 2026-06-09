@@ -88,3 +88,6 @@ htmlcov/
 # Hugging Face
 .huggingface/
 *.safetensors
+
+# Gradio
+gradio_cached_examples/

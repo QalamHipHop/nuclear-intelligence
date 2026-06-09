@@ -25,7 +25,7 @@ redis==5.0.1
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.23
 alembic==1.13.0
-gradio==4.19.1
+gradio==4.36.1
 huggingface-hub==0.19.4
 huggingface-datasets==2.16.1
 pydantic-settings==2.1.0
