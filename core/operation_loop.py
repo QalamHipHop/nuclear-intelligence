@@ -1,97 +1,117 @@
 
 import time
-import logging
-from typing import Dict, Any
-
+import os
+from datetime import datetime
+from typing import Dict, Any, List
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from core.nuclear_intelligence import NuclearIntelligenceCore, ResearchQuestion, ResearchAnswer, EvaluationScore
 from blockchain.virtual_ledger import VirtualLedger
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
 class OperationLoopConfig(BaseModel):
-    question_generation_context: str = Field(default="", description="Context for generating research questions.")
-    min_scientific_accuracy: float = Field(default=93.0, description="Minimum scientific accuracy score for token minting.")
-    loop_interval_seconds: int = Field(default=1800, description="Interval between operation cycles in seconds (30 minutes).")
+    interval_minutes: int = Field(default=45, description="Minutes between cycles")
+    min_accuracy: float = Field(default=93.0, description="Minimum accuracy for minting")
+    auto_start: bool = Field(default=True)
+
+class OperationCycleResult(BaseModel):
+    timestamp: str
+    question: ResearchQuestion
+    answer: ResearchAnswer
+    evaluation: EvaluationScore
+    minted: bool
+    tx_hash: Optional[str] = None
 
 class OperationLoop:
     def __init__(
         self,
-        nuclear_intelligence_core: NuclearIntelligenceCore,
-        virtual_ledger: VirtualLedger,
-        config: OperationLoopConfig
+        core: NuclearIntelligenceCore,
+        ledger: VirtualLedger,
+        config: OperationLoopConfig = OperationLoopConfig()
     ):
-        self.ni_core = nuclear_intelligence_core
-        self.virtual_ledger = virtual_ledger
+        self.core = core
+        self.ledger = ledger
         self.config = config
+        self.history: List[OperationCycleResult] = []
+        self.is_running = False
 
-    def run_single_cycle(self):
-        logging.info("Starting a new operation cycle...")
+    def run_cycle(self) -> OperationCycleResult:
+        logger.info("--- Starting Nuclear Intelligence Operation Cycle ---")
+        start_time = datetime.now()
+        
         try:
-            # Step 1: Question Generation
-            question = self.ni_core.generate_question(context=self.config.question_generation_context)
-            logging.info(f"Generated Question: {question.question}")
+            # 1. Question Generation
+            logger.info("Step 1: Generating research question...")
+            question = self.core.generate_question()
+            logger.info(f"Question: {question.question}")
 
-            # Step 2: Deep Research
-            answer = self.ni_core.conduct_research(question)
-            logging.info(f"Research Answer (excerpt): {answer.answer[:100]}...")
+            # 2. Deep Research
+            logger.info("Step 2: Conducting deep research...")
+            answer = self.core.conduct_research(question)
+            logger.info(f"Research complete. Length: {len(answer.answer)} chars")
 
-            # Step 3: Multi-layer Professional Evaluation
-            evaluation = self.ni_core.evaluate_answer(question, answer)
-            logging.info(f"Evaluation: Accuracy={evaluation.scientific_accuracy}, Novelty={evaluation.novelty_score}, Usefulness={evaluation.usefulness_score}")
+            # 3. Evaluation
+            logger.info("Step 3: Evaluating research output...")
+            evaluation = self.core.evaluate_answer(question, answer)
+            logger.info(f"Scores: Accuracy={evaluation.scientific_accuracy}, Novelty={evaluation.novelty_score}")
 
-            # Step 4: Token Minting (if approved)
-            if evaluation.scientific_accuracy >= self.config.min_scientific_accuracy and evaluation.self_consistency_check:
-                logging.info("Answer approved for token minting.")
-                # Add knowledge to NI Core's knowledge base
-                self.ni_core.add_knowledge(question, answer, evaluation)
-
-                # Mint NES token
-                token_metadata = {
+            # 4. Integration & Minting
+            minted = False
+            tx_hash = None
+            if evaluation.scientific_accuracy >= self.config.min_accuracy and evaluation.self_consistency_check:
+                logger.info("Step 4: Answer approved. Integrating knowledge and minting NES...")
+                self.core.integrate_knowledge(question, answer, evaluation)
+                
+                metadata = {
                     "question": question.dict(),
-                    "answer": answer.dict(),
                     "evaluation": evaluation.dict(),
-                    "timestamp": datetime.now().isoformat(),
-                    "model_version": self.ni_core.llm.model_name, # Assuming llm has model_name attribute
-                    "huggingface_link": "#TODO: Add Hugging Face Space link here"
+                    "summary": answer.answer[:500]
                 }
-                self.virtual_ledger.mint_nes_token(token_metadata)
-                logging.info("NES token minted and knowledge integrated.")
+                self.ledger.mint_nes_token(metadata)
+                tx_hash = self.ledger.get_last_block().hash
+                minted = True
             else:
-                logging.warning(f"Answer not approved for token minting. Accuracy: {evaluation.scientific_accuracy} (Min: {self.config.min_scientific_accuracy}), Self-consistency: {evaluation.self_consistency_check}")
+                logger.warning(f"Step 4: Answer rejected. Accuracy {evaluation.scientific_accuracy} < {self.config.min_accuracy}")
 
-            logging.info("Operation cycle completed successfully.")
+            result = OperationCycleResult(
+                timestamp=start_time.isoformat(),
+                question=question,
+                answer=answer,
+                evaluation=evaluation,
+                minted=minted,
+                tx_hash=tx_hash
+            )
+            self.history.append(result)
+            self._save_report(result)
+            
+            logger.info(f"Cycle completed in {datetime.now() - start_time}")
+            return result
 
         except Exception as e:
-            logging.error(f"Error during operation cycle: {e}", exc_info=True)
+            logger.error(f"Cycle failed: {e}")
+            raise
 
-    def start_loop(self):
-        logging.info(f"Starting operation loop with interval: {self.config.loop_interval_seconds} seconds.")
-        while True:
-            self.run_single_cycle()
-            logging.info(f"Waiting for {self.config.loop_interval_seconds} seconds before next cycle...")
-            time.sleep(self.config.loop_interval_seconds)
+    def _save_report(self, result: OperationCycleResult):
+        report_dir = "reports"
+        os.makedirs(report_dir, exist_ok=True)
+        filename = f"{report_dir}/cycle_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(result.json(indent=4))
 
-if __name__ == "__main__":
-    # Example Usage (requires VirtualLedger to be properly set up)
-    # This part is for local testing and demonstration
-    from blockchain.virtual_ledger import VirtualLedger, Block, Transaction
+    def start(self):
+        self.is_running = True
+        logger.info(f"Operation loop started. Interval: {self.config.interval_minutes} minutes")
+        while self.is_running:
+            try:
+                self.run_cycle()
+            except Exception as e:
+                logger.error(f"Error in loop: {e}")
+            
+            logger.info(f"Waiting {self.config.interval_minutes} minutes...")
+            time.sleep(self.config.interval_minutes * 60)
 
-    # Initialize NI Core and Virtual Ledger
-    ni_core_instance = NuclearIntelligenceCore()
-    virtual_ledger_instance = VirtualLedger()
+    def stop(self):
+        self.is_running = False
+        logger.info("Operation loop stopped.")
 
-    # Configure the operation loop
-    op_config = OperationLoopConfig(
-        question_generation_context="Focus on advanced nuclear reactor designs and their economic implications.",
-        min_scientific_accuracy=90.0, # Lower for testing
-        loop_interval_seconds=10 # Shorter for testing
-    )
-
-    # Create and start the operation loop
-    op_loop = OperationLoop(ni_core_instance, virtual_ledger_instance, op_config)
-    # op_loop.start_loop() # Uncomment to run continuously
-    op_loop.run_single_cycle() # Run a single cycle for demonstration
-
-
+from typing import Optional

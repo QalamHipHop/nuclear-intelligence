@@ -26,7 +26,8 @@ def main():
         # Verify chain integrity
         is_valid = ledger.is_chain_valid()
         
-        logging.info(f"Blockchain Integrity: {"✓ VALID" if is_valid else "✗ INVALID"}")
+        status_msg = "✓ VALID" if is_valid else "✗ INVALID"
+        logging.info(f"Blockchain Integrity: {status_msg}")
         logging.info(f"Chain length: {len(ledger.chain)}")
         logging.info(f"Pending transactions: {len(ledger.pending_transactions)}")
         logging.info(f"Total NES minted: {ledger.nes_supply}")

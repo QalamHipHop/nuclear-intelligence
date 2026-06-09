@@ -42,13 +42,16 @@ def main():
         export_dir = Path(__file__).parent.parent / "exports"
         export_dir.mkdir(exist_ok=True)
         
-        export_file = export_dir / f"system_state_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json"
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        export_file = export_dir / f"system_state_{ts}.json"
         with open(export_file, "w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
         
         logging.info(f"System state exported to {export_file}")
-        logging.info(f"Blockchain blocks: {len(export_data["blockchain_state"]["chain"])}")
-        logging.info(f"Knowledge graph entities: {sum(len(v) for v in export_data["knowledge_graph_state"].values())}")
+        blocks_count = len(export_data["blockchain_state"]["chain"])
+        kg_entities_count = sum(len(v) for v in export_data["knowledge_graph_state"].values())
+        logging.info(f"Blockchain blocks: {blocks_count}")
+        logging.info(f"Knowledge graph entities: {kg_entities_count}")
         
         return 0
         
