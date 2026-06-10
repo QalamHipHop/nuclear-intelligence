@@ -66,7 +66,7 @@ def start_background_loop():
     return "Loop already running."
 
 # Gradio Interface
-with gr.Blocks(title="Nuclear Intelligence Dashboard", theme=gr.themes.Soft()) as demo:
+with gr.Blocks() as demo:
     gr.Markdown("# ⚛️ Nuclear Intelligence Dashboard")
     gr.Markdown("Autonomous AI Agent for Nuclear Knowledge Tokenization")
     
@@ -99,4 +99,4 @@ with gr.Blocks(title="Nuclear Intelligence Dashboard", theme=gr.themes.Soft()) a
 if __name__ == "__main__":
     # Start loop automatically on launch
     threading.Thread(target=op_loop.start, daemon=True).start()
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False, title="Nuclear Intelligence Dashboard", theme=gr.themes.Soft())

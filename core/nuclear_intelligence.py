@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from loguru import logger
 
 from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
