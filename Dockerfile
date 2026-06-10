@@ -34,4 +34,4 @@ ENV PYTHONUNBUFFERED=1
 ENV GRADIO_SERVER_NAME="0.0.0.0"
 
 # Launch the application
-CMD ["python3", "api/main.py"]
+CMD ["python3", "-u", "api/main.py"]

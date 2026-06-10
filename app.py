@@ -90,7 +90,9 @@ with gr.Blocks(title="Nuclear Intelligence Dashboard", theme=gr.themes.Soft()) a
             refresh_btn.click(get_blockchain_df, outputs=ledger_table)
 
         with gr.TabItem("Knowledge Graph"):
-            gr.JSON(core.kg.graph)
+            kg_display = gr.JSON(core.kg.graph)
+            refresh_kg_btn = gr.Button("Refresh Knowledge Graph")
+            refresh_kg_btn.click(lambda: core.kg.graph, outputs=kg_display)
 
     demo.load(get_stats, outputs=[nes_stat, block_stat, kg_stat])
 

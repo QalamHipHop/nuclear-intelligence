@@ -5,7 +5,6 @@ from .nuclear_intelligence import (
     ResearchQuestion,
     ResearchAnswer,
     EvaluationScore,
-    ResearchCategory
 )
 from .operation_loop import OperationLoop, OperationLoopConfig
 
@@ -14,7 +13,6 @@ __all__ = [
     "ResearchQuestion",
     "ResearchAnswer",
     "EvaluationScore",
-    "ResearchCategory",
     "OperationLoop",
     "OperationLoopConfig"
 ]

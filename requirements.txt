@@ -54,5 +54,5 @@ loguru>=0.7.2
 # Audio and System
 pydub>=0.25.1
 PyAudio>=0.2.13
-audioop-lts>=0.2.1  # For Python 3.13 compatibility
+audioop-lts>=0.2.1; python_version >= "3.13"
 pyaudioop-compatible>=1.0.0; python_version >= "3.13"

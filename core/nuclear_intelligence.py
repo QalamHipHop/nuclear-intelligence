@@ -83,14 +83,21 @@ class NuclearIntelligenceCore:
 
     def _init_vectorstore(self):
         if os.path.exists(self.vector_db_path):
-            return FAISS.load_local(self.vector_db_path, self.embeddings, allow_dangerous_deserialization=True)
+            try:
+                return FAISS.load_local(self.vector_db_path, self.embeddings, allow_dangerous_deserialization=True)
+            except Exception as e:
+                logger.error(f"Error loading FAISS index: {e}. Re-initializing...")
+                return self._create_new_vectorstore()
         else:
-            # Initialize with a base document
-            initial_text = "Nuclear Intelligence: Accelerating nuclear energy through AI and blockchain."
-            vs = FAISS.from_texts([initial_text], self.embeddings)
-            os.makedirs(os.path.dirname(self.vector_db_path), exist_ok=True)
-            vs.save_local(self.vector_db_path)
-            return vs
+            return self._create_new_vectorstore()
+
+    def _create_new_vectorstore(self):
+        # Initialize with a base document
+        initial_text = "Nuclear Intelligence: Accelerating nuclear energy through AI and blockchain."
+        vs = FAISS.from_texts([initial_text], self.embeddings)
+        os.makedirs(os.path.dirname(self.vector_db_path), exist_ok=True)
+        vs.save_local(self.vector_db_path)
+        return vs
 
     def generate_question(self, context: str = "") -> ResearchQuestion:
         parser = PydanticOutputParser(pydantic_object=ResearchQuestion)
