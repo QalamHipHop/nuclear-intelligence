@@ -46,9 +46,13 @@ class Transaction:
         self.metadata = metadata or {}
         self.timestamp = timestamp or datetime.now().isoformat()
         self.tx_id = tx_id or self._gen_tx_id()
-        self.signature = signature or self._sign()
         self.nonce = nonce
         self.status = "confirmed"
+        # Signature must be calculated AFTER nonce is set
+        if signature is not None:
+            self.signature = signature
+        else:
+            self.signature = self._sign()
 
     def _gen_tx_id(self) -> str:
         content = f"{self.sender}{self.recipient}{self.amount}{self.timestamp}{random.random()}"
@@ -178,7 +182,8 @@ class Block:
         self.merkle_root = self.merkle_tree.merkle_root
         self.hash = block_hash or self._compute_hash()
         self.reward = 1.0
-        self.size_bytes = len(json.dumps(self.to_dict()).encode())
+        # Calculate size after all attributes are set
+        self.size_bytes = self._calculate_size()
 
     def _compute_hash(self) -> str:
         block_data = json.dumps({
@@ -190,6 +195,22 @@ class Block:
             "miner": self.miner,
         }, sort_keys=True)
         return hashlib.sha3_256(block_data.encode()).hexdigest()
+
+    def _calculate_size(self) -> int:
+        """Calculate block size in bytes"""
+        return len(json.dumps({
+            "index": self.index,
+            "timestamp": self.timestamp,
+            "transactions": [tx.to_dict() for tx in self.transactions],
+            "merkle_root": self.merkle_root,
+            "previous_hash": self.previous_hash,
+            "nonce": self.nonce,
+            "hash": self.hash,
+            "difficulty": self.difficulty,
+            "miner": self.miner,
+            "reward": self.reward,
+            "tx_count": len(self.transactions),
+        }, sort_keys=True).encode())
 
     def mine(self, max_attempts: int = 1000000) -> Tuple[bool, int]:
         """Proof-of-Work mining with adaptive difficulty"""
@@ -598,10 +619,17 @@ class VirtualLedger:
             with open(self.ledger_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            self.chain = [Block.from_dict(b) for b in data.get("chain", [])]
-            self.difficulty = data.get("difficulty", 4)
-            self.nes_supply = data.get("nes_supply", 0.0)
-            self.total_transactions = data.get("total_transactions", 0)
+            # Handle both old format (list) and new format (dict)
+            if isinstance(data, list):
+                self.chain = [Block.from_dict(b) for b in data]
+                self.difficulty = 4
+                self.nes_supply = sum(tx.amount for block in self.chain for tx in block.transactions if tx.sender == self.KNOWLEDGE_CREATION)
+                self.total_transactions = sum(len(b.transactions) for b in self.chain)
+            else:
+                self.chain = [Block.from_dict(b) for b in data.get("chain", [])]
+                self.difficulty = data.get("difficulty", 4)
+                self.nes_supply = data.get("nes_supply", 0.0)
+                self.total_transactions = data.get("total_transactions", 0)
 
             # Rebuild balances
             for block in self.chain:
