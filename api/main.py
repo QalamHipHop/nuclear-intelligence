@@ -26,4 +26,4 @@ if __name__ == "__main__":
     threading.Thread(target=run_fastapi, daemon=True).start()
     
     # Start Gradio in the main thread
-    demo.launch(server_name="0.0.0.0", server_port=7860, title="Nuclear Intelligence Dashboard", theme=gr.themes.Soft())
+    demo.launch(server_name="0.0.0.0", server_port=7860)
