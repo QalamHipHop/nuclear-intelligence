@@ -51,8 +51,8 @@ tenacity>=8.2.3
 tqdm>=4.66.1
 loguru>=0.7.2
 
-# Audio and System
-pydub>=0.25.1
-PyAudio>=0.2.13
+# Audio and System (Commented out to fix build errors on HF)
+# pydub>=0.25.1
+# PyAudio>=0.2.13
 audioop-lts>=0.2.1; python_version >= "3.13"
 pyaudioop-compatible>=1.0.0; python_version >= "3.13"
