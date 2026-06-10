@@ -4,90 +4,49 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual environments
 venv/
-ENV/
 env/
-.venv
+.venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-.DS_Store
-
-# Environment variables
-.env
-.env.local
-.env.*.local
 
 # Logs
 logs/
 *.log
 
-# Data and cache
+# Data
+knowledge_base/*.json
+!knowledge_base/*.template.json
+reports/
 *.db
-*.sqlite
-*.sqlite3
-*.cache
-faiss_index/
-*.pkl
-*.pickle
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+# FAISS
+knowledge_base/faiss_index/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Reports and exports
-reports/
-exports/
-
-# Git LFS
-*.lfs
-
-# Node (if using npm)
-node_modules/
-package-lock.json
-yarn.lock
+# Jupyter
+.ipynb_checkpoints/
 
 # Docker
 .dockerignore
-docker-compose.override.yml
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Hugging Face
-.huggingface/
-*.safetensors
-
-# Gradio
-gradio_cached_examples/
+# Secrets
+*secret*
+*token*
+*.key
