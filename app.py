@@ -103,6 +103,7 @@ with gr.Blocks() as demo:
     demo.load(get_stats, outputs=[nes_stat, block_stat, kg_stat])
 
 if __name__ == "__main__":
-    # Start loop automatically on launch
-    threading.Thread(target=op_loop.start, daemon=True).start()
+    # Start loop automatically on launch if configured
+    if os.getenv("AUTO_START_LOOP", "true").lower() == "true":
+        threading.Thread(target=op_loop.start, daemon=True).start()
     demo.launch(server_name="0.0.0.0", server_port=7860, share=False, title="Nuclear Intelligence Dashboard", theme=gr.themes.Soft())
