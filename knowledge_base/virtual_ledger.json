@@ -1,0 +1,61 @@
+[
+    {
+        "index": 0,
+        "timestamp": "2026-06-10T13:05:19.965464",
+        "transactions": [
+            {
+                "sender": "system",
+                "recipient": "genesis",
+                "amount": 0.0,
+                "timestamp": "2026-06-10T13:05:19.965411",
+                "metadata": {
+                    "note": "Nuclear Intelligence Genesis Block"
+                },
+                "signature": "e77397443693f2ac29866e851b4ba7c2f1b0e9e5c6cc539400a53f3204331a47"
+            }
+        ],
+        "previous_hash": "0",
+        "nonce": 556,
+        "hash": "000ba064ac96f73880c5daa38b792e822987228b0c721867745816948a2cc401"
+    },
+    {
+        "index": 1,
+        "timestamp": "2026-06-10T13:08:09.428119",
+        "transactions": [
+            {
+                "sender": "knowledge_creation_event",
+                "recipient": "system_treasury",
+                "amount": 1.0,
+                "timestamp": "2026-06-10T13:08:09.427995",
+                "metadata": {
+                    "question": {
+                        "question": "How can advanced machine learning algorithms integrated with real-time plasma diagnostics optimize magnetic confinement configurations to achieve sustained net-positive energy gain in tokamak fusion reactors under varying operational conditions?",
+                        "category": "Physics",
+                        "difficulty": 10,
+                        "keywords": [
+                            "fusion energy",
+                            "tokamak",
+                            "magnetic confinement",
+                            "plasma diagnostics",
+                            "machine learning",
+                            "energy gain",
+                            "real-time optimization"
+                        ]
+                    },
+                    "evaluation": {
+                        "scientific_accuracy": 95.0,
+                        "novelty_score": 85.0,
+                        "usefulness_score": 90.0,
+                        "self_consistency_check": true,
+                        "justification": "The answer accurately captures the state-of-the-art approach to integrating advanced machine learning algorithms with real-time plasma diagnostics for optimizing magnetic confinement in tokamaks. It correctly emphasizes the complex, nonlinear, and stochastic nature of plasma dynamics and the utility of surrogate ML models such as DNNs, RNNs, and GNNs. The description of predictive control using reinforcement learning to mitigate instabilities and the use of online learning for adaptability under varying operational conditions is consistent with current fusion research trends. The mathematical formulations provided are appropriate and reflect established control and optimization frameworks in plasma control literature. The explanation also highlights the importance of balancing multiple objectives, such as maximizing fusion gain and minimizing plasma-wall interactions, which is a critical practical consideration. The novelty score is high because while ML for plasma control is an emerging and active field, the integration and detailed formulation presented show a sophisticated and comprehensive approach rather than a trivial application. The usefulness score is also high because such ML-driven adaptive control frameworks have strong potential to accelerate progress towards sustained net-positive energy gain (Q > 1) in tokamaks, directly addressing one of the main challenges in fusion energy development. The answer is logically consistent throughout, with clear connections between real-time diagnostics, ML modeling, control policy derivation, and adaptation to operational variability."
+                    },
+                    "summary": "Achieving sustained net-positive energy gain (Q > 1) in tokamak fusion reactors hinges critically on optimizing magnetic confinement to maintain plasma stability and maximize fusion power output under highly dynamic operational conditions. Advanced machine learning (ML) algorithms integrated with real-time plasma diagnostics enable a paradigm shift in this optimization process through predictive, adaptive, and robust control methodologies.\n\n1. **Role of Real-Time Plasma Diagnostics**: Tokamaks a"
+                },
+                "signature": "be3c324ac4bbc1ea9b5ce5e65d9643a9aba61660eb21fdb079256618ab82aa68"
+            }
+        ],
+        "previous_hash": "000ba064ac96f73880c5daa38b792e822987228b0c721867745816948a2cc401",
+        "nonce": 9051,
+        "hash": "000c96c2370aa6cee24a277092c786707a17f49930f42579590eeb6c99879477"
+    }
+]

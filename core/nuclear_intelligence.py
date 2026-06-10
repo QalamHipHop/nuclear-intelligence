@@ -7,7 +7,8 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from loguru import logger
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
@@ -42,7 +43,11 @@ class KnowledgeGraph:
         if os.path.exists(self.path):
             try:
                 with open(self.path, 'r', encoding='utf-8') as f:
-                    self.graph = json.load(f)
+                    data = json.load(f)
+                    if isinstance(data, dict) and "entities" in data and "relationships" in data:
+                        self.graph = data
+                    else:
+                        logger.warning("Invalid Knowledge Graph format. Initializing new graph.")
             except Exception as e:
                 logger.error(f"Error loading Knowledge Graph: {e}")
 
@@ -74,9 +79,9 @@ class NuclearIntelligenceCore:
         model_name: str = None,
         vector_db_path: str = "knowledge_base/faiss_index"
     ):
-        model_name = model_name or os.getenv("LLM_MODEL", "gpt-4o")
+        model_name = model_name or os.getenv("LLM_MODEL", "gpt-4.1-mini")
         self.llm = ChatOpenAI(model=model_name, temperature=0.7)
-        self.embeddings = OpenAIEmbeddings()
+        self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         self.vector_db_path = vector_db_path
         self.kg = KnowledgeGraph()
         self.vectorstore = self._init_vectorstore()
@@ -99,14 +104,31 @@ class NuclearIntelligenceCore:
         vs.save_local(self.vector_db_path)
         return vs
 
+    def _invoke_with_retry(self, prompt, parser, inputs, max_retries=3):
+        for i in range(max_retries):
+            try:
+                chain = prompt | self.llm
+                response = chain.invoke(inputs)
+                content = response.content
+                # Clean content if LLM wrapped it in markdown code blocks
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                return parser.parse(content)
+            except Exception as e:
+                if i == max_retries - 1:
+                    raise
+                logger.warning(f"Retry {i+1} due to error: {e}")
+                time.sleep(1)
+
     def generate_question(self, context: str = "") -> ResearchQuestion:
         parser = PydanticOutputParser(pydantic_object=ResearchQuestion)
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an advanced Nuclear Intelligence Architect. Generate a cutting-edge, complex research question that pushes the boundaries of nuclear science, fusion, or energy economics.\n{format_instructions}"),
             ("user", "Context: {context}\nGenerate a high-impact research question.")
         ])
-        chain = prompt | self.llm | parser
-        return chain.invoke({"context": context, "format_instructions": parser.get_format_instructions()})
+        return self._invoke_with_retry(prompt, parser, {"context": context, "format_instructions": parser.get_format_instructions()})
 
     def conduct_research(self, question: ResearchQuestion) -> ResearchAnswer:
         # RAG: Retrieve context
@@ -118,8 +140,7 @@ class NuclearIntelligenceCore:
             ("system", "You are a Senior Nuclear Scientist. Conduct deep research and provide a comprehensive, accurate answer with scientific rigor and citations.\n{format_instructions}"),
             ("user", "Question: {question}\nRelated Context: {context}\nProvide a detailed scientific answer.")
         ])
-        chain = prompt | self.llm | parser
-        return chain.invoke({
+        return self._invoke_with_retry(prompt, parser, {
             "question": question.question, 
             "context": context, 
             "format_instructions": parser.get_format_instructions()
@@ -131,8 +152,7 @@ class NuclearIntelligenceCore:
             ("system", "You are an Independent Scientific Auditor. Evaluate the research output for accuracy, novelty, and project utility.\n{format_instructions}"),
             ("user", "Question: {question}\nAnswer: {answer}\nEvaluate this research output.")
         ])
-        chain = prompt | self.llm | parser
-        return chain.invoke({
+        return self._invoke_with_retry(prompt, parser, {
             "question": question.question, 
             "answer": answer.answer, 
             "format_instructions": parser.get_format_instructions()
