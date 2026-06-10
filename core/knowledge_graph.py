@@ -480,8 +480,8 @@ class KnowledgeGraph:
             "avg_accuracy": sum(accuracies) / max(len(accuracies), 1),
             "avg_novelty": sum(novelties) / max(len(novelties), 1),
             "verified_entities": sum(1 for e in entities.values() if e.get("verified")),
-            "latest_update": self.graph["metadata"].get("last_updated", "N/A"),
-            "version": self.graph["metadata"].get("version", "unknown"),
+            "latest_update": self.graph.get("metadata", {}).get("last_updated", "N/A"),
+            "version": self.graph.get("metadata", {}).get("version", "unknown"),
         }
 
 

@@ -17,8 +17,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
-from datetime import datetime
+from typing import Optional, Dict, Any, List, Tuple
+from datetime import datetime, timedelta
 import time
 import json
 from loguru import logger
@@ -50,8 +50,6 @@ app.add_middleware(
 )
 
 # ─── Rate Limiting ────────────────────────────────────────────────
-
-from datetime import datetime, timedelta
 
 class RateLimiter:
     def __init__(self):
@@ -239,8 +237,7 @@ async def get_status():
 # ─── Knowledge Endpoints ───────────────────────────────────────────
 
 @app.post("/api/v1/knowledge/ask")
-@rate_limit_dependency(30, 60)
-async def ask_question(req: AskRequest):
+async def ask_question(request: Request, req: AskRequest):
     """Ask a nuclear energy question"""
     if not core:
         raise HTTPException(503, "Core not initialized")
@@ -407,7 +404,6 @@ async def search_transactions(q: str, limit: int = 20):
 # ─── Operation Endpoints ───────────────────────────────────────────
 
 @app.post("/api/v1/operations/cycle")
-@rate_limit_dependency(5, 60)
 async def trigger_cycle(req: CycleRequest):
     """Trigger a manual research cycle"""
     if not op_loop:

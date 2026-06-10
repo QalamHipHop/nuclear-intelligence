@@ -20,21 +20,27 @@ from pathlib import Path
 IS_HF_SPACE = bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE"))
 IS_DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 
-# Try to import gradio
+# ─── Try imports with fallbacks ─────────────────────────────────
+gradio_available = False
 try:
     import gradio as gr
     import pandas as pd
     from loguru import logger
+    gradio_available = True
 except ImportError as e:
-    print(f"ERROR: Missing dependency: {e}")
+    print(f"WARNING: Missing dependency: {e}")
     print("Install with: pip install gradio pandas loguru")
-    sys.exit(1)
+    gradio_available = False
 
 # ─── Load Environment ─────────────────────────────────────────────
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
 # ─── Core Imports ─────────────────────────────────────────────────
+CORE_AVAILABLE = False
 try:
     from core.nuclear_intelligence import (
         NuclearIntelligenceCore, ResearchQuestion, ResearchAnswer, EvaluationScore
@@ -43,7 +49,12 @@ try:
     from blockchain.virtual_ledger import VirtualLedger
     CORE_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"Core modules not available: {e}")
+    if gradio_available:
+        try:
+            from loguru import logger
+            logger.warning(f"Core modules not available: {e}")
+        except Exception:
+            pass
     CORE_AVAILABLE = False
 
 # ─── Configuration ────────────────────────────────────────────────
@@ -77,13 +88,23 @@ if CORE_AVAILABLE:
 
         if auto_start_loop:
             threading.Thread(target=op_loop.start, daemon=True).start()
-            logger.info("🔄 Operation loop auto-started")
 
-        logger.info(f"⚛️ Nuclear Intelligence v4.0 initialized")
-        logger.info(f"   LLM Providers: {len(core.llm._available_providers)}")
-        logger.info(f"   NES Supply: {ledger.nes_supply}")
+        if gradio_available:
+            try:
+                from loguru import logger
+                logger.info(f"⚛️ Nuclear Intelligence v4.0 initialized")
+                logger.info(f"   LLM Providers: {len(core.llm._available_providers)}")
+                logger.info(f"   NES Supply: {ledger.nes_supply}")
+            except Exception:
+                pass
+
     except Exception as e:
-        logger.error(f"Failed to initialize core: {e}")
+        if gradio_available:
+            try:
+                from loguru import logger
+                logger.error(f"Failed to initialize core: {e}")
+            except Exception:
+                pass
         CORE_AVAILABLE = False
 
 # ─── Helper Functions ─────────────────────────────────────────────
@@ -161,7 +182,7 @@ def get_system_stats() -> str:
     return "\n".join(lines)
 
 
-def get_blockchain_df() -> pd.DataFrame:
+def get_blockchain_df() -> "pd.DataFrame":
     """Get blockchain data as DataFrame"""
     if not ledger:
         return pd.DataFrame([{"Status": "Initializing..."}])
@@ -186,7 +207,7 @@ def get_blockchain_df() -> pd.DataFrame:
         return pd.DataFrame([{"Error": str(e)}])
 
 
-def get_entities_df() -> pd.DataFrame:
+def get_entities_df() -> "pd.DataFrame":
     """Get knowledge graph entities as DataFrame"""
     if not core:
         return pd.DataFrame([{"Status": "Initializing..."}])
@@ -214,7 +235,7 @@ def get_entities_df() -> pd.DataFrame:
         return pd.DataFrame([{"Error": str(e)}])
 
 
-def get_cycle_history_df() -> pd.DataFrame:
+def get_cycle_history_df() -> "pd.DataFrame":
     """Get operation cycle history"""
     if not op_loop:
         return pd.DataFrame([{"Status": "Initializing..."}])
@@ -262,7 +283,7 @@ def get_category_chart():
         )
         fig.update_layout(height=400, margin=dict(l=20, r=20, t=50, b=20))
         return fig
-    except:
+    except Exception:
         return None
 
 
@@ -291,7 +312,7 @@ def get_accuracy_novelty_chart():
         )
         fig.update_layout(height=400, margin=dict(l=20, r=20, t=50, b=20))
         return fig
-    except:
+    except Exception:
         return None
 
 
@@ -326,7 +347,57 @@ def get_score_distribution_chart():
         )
         fig.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
         return fig
-    except:
+    except Exception:
+        return None
+
+
+def get_block_time_chart():
+    """Get block activity chart showing minting history"""
+    if not ledger:
+        return None
+    try:
+        import plotly.express as px
+        data = []
+        for block in ledger.chain:
+            for tx in block.transactions:
+                meta = tx.metadata or {}
+                if meta.get('type') == 'nes_mint' or tx.sender == 'knowledge_creation_event':
+                    data.append({
+                        'Block': block.index,
+                        'Time': block.timestamp[:19],
+                        'Type': meta.get('type', 'mint'),
+                        'Size (bytes)': block.size_bytes,
+                        'TX Count': len(block.transactions),
+                        'Difficulty': block.difficulty,
+                    })
+        if not data:
+            for block in ledger.chain:
+                data.append({
+                    'Block': block.index,
+                    'Time': block.timestamp[:19],
+                    'Type': 'block',
+                    'Size (bytes)': block.size_bytes,
+                    'TX Count': len(block.transactions),
+                    'Difficulty': block.difficulty,
+                })
+        df = pd.DataFrame(data)
+        if df.empty:
+            return None
+        fig = px.bar(
+            df, x='Block', y='TX Count',
+            title='Blockchain Activity - Transactions per Block',
+            labels={'Block': 'Block Index', 'TX Count': 'Transactions'},
+            color='Difficulty',
+            color_continuous_scale='Blues',
+        )
+        fig.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
+        return fig
+    except Exception as e:
+        try:
+            from loguru import logger
+            logger.debug(f"Block chart error: {e}")
+        except Exception:
+            pass
         return None
 
 
@@ -548,26 +619,34 @@ CSS = """
 .footer { text-align: center; color: #888; font-size: 0.85rem; padding: 20px; }
 """
 
-THEME = gr.themes.Soft.from_hub("gradio/modern")
+# Use Default theme (no external theme needed - works in HF Spaces too)
+THEME = gr.themes.Default(
+    primary_hue="blue",
+    secondary_hue="purple",
+).set(
+    body_background_fill="#f8fafc",
+    body_text_color="#1e293b",
+    border_color_accent="#a855f7",
+)
 
 
 # ─── Gradio Interface ─────────────────────────────────────────────
 
 with gr.Blocks(
     title="⚛️ Nuclear Intelligence v4.0",
-    css=CSS,
-    theme=THEME,
-    head="<meta name='description' content='AI-Powered Nuclear Energy Research with Free LLM Providers'>"
 ) as demo:
 
     # ─── Header ──────────────────────────────────────────────────
-    gr.Markdown(
+    provider_count = len(core.llm._available_providers) if core else 0
+    has_provider = provider_count > 0
+    
+    header_md = (
         "# ⚛️ Nuclear Intelligence v4.0\n"
-        "### AI-Powered Nuclear Energy Research & NES Token System\n"
-        f"Powered by {len(core.llm._available_providers) if core else 0} Free LLM Providers | "
-        f"DeepSeek • Groq • Cerebras • Gemini • HuggingFace",
-        elem_id="header"
+        "### AI-Powered Nuclear Energy Research & NES Token System\n\n"
+        f"🤖 **Status:** {'✅ ' + str(provider_count) + ' LLM Provider(s) Active' if has_provider else '⚠️ DEMO MODE - Add API keys'} \n\n"
+        "**Free Providers:** DeepSeek V3 • Groq Llama 3.3 • Cerebras • Gemini 2.0 • HuggingFace"
     )
+    gr.Markdown(header_md, elem_id="header")
 
     # ─── Stats Row ────────────────────────────────────────────────
     with gr.Row():
@@ -596,6 +675,9 @@ with gr.Blocks(
         ),
         outputs=[nes_stat, block_stat, entity_stat, cycle_stat, provider_stat, llm_md, sys_md]
     )
+    
+    # Auto-refresh every 30 seconds
+    demo.autorefresh_interval = 30
 
     # ─── Main Tabs ───────────────────────────────────────────────
     with gr.Tabs():
@@ -684,6 +766,41 @@ with gr.Blocks(
             hist_df = gr.DataFrame(get_cycle_history_df, wrap=True, label="Recent Cycles (Last 50)")
             gr.Button("🔄 Refresh History").click(fn=get_cycle_history_df, outputs=[hist_df])
 
+        # ─── System Health ────────────────────────────────────
+        with gr.TabItem("🩺 System Health"):
+            health_md = (
+                "## 🩺 System Health Check\n\n"
+                f"**Core Status:** {'✅ Initialized' if CORE_AVAILABLE else '❌ Not Available'}\n"
+                f"**LLM Engine:** {'✅ Active' if (core and core.llm) else '❌ Not Available'}\n"
+                f"**Knowledge Graph:** {'✅ Loaded' if (core and core.kg) else '❌ Not Available'}\n"
+                f"**Blockchain Ledger:** {'✅ Active' if ledger else '❌ Not Available'}\n"
+                f"**Operation Loop:** {'🟢 Running' if (op_loop and op_loop.is_running) else '🔴 Stopped' if op_loop else '❌ Not Available'}\n\n"
+                "### 📋 Configuration\n"
+                f"- Developer Mode: `{os.getenv('DEVELOPER_MODE', 'true').upper()}`\n"
+                f"- Auto Start Loop: `{os.getenv('AUTO_START_LOOP', 'false').upper()}`\n"
+                f"- Loop Interval: `{os.getenv('OPERATION_LOOP_INTERVAL_MINUTES', '30')}` minutes\n"
+                f"- Accuracy Threshold: `{os.getenv('SCIENTIFIC_ACCURACY_THRESHOLD', '93')}`%\n"
+                f"- HF Space: `{'Yes' if IS_HF_SPACE else 'No'}`\n\n"
+                "### 🔧 Quick Actions\n"
+                "- Add API keys to `.env` file for more providers\n"
+                "- Restart the app after adding keys\n"
+                "- Check logs for detailed error information"
+            )
+            gr.Markdown(health_md)
+            
+            if core and core.llm:
+                health_detail = core.llm.health_check()
+                providers_table = []
+                for name, info in health_detail.get("providers", {}).items():
+                    providers_table.append({
+                        "Provider": name,
+                        "Status": "🟢 Active" if info.get("configured") else "⚪ Not Configured",
+                        "Priority": info.get("priority", "?"),
+                        "Model": info.get("default_model", "N/A")[:30],
+                    })
+                if providers_table:
+                    gr.DataFrame(providers_table, label="Provider Details")
+
         # ─── LLM Providers ──────────────────────────────────────
         with gr.TabItem("🤖 LLM Providers"):
             gr.Markdown("### 🤖 Available LLM Providers (All FREE!)")
@@ -735,11 +852,14 @@ with gr.Blocks(
             """)
 
     # ─── Footer ──────────────────────────────────────────────────
+    provider_count = len(core.llm._available_providers) if core else 0
+    research_count = core.stats.get('researches_conducted', 0) if core else 0
+    nes_supply = ledger.nes_supply if ledger else 0
     gr.Markdown(
-        "### ⚛️ Nuclear Intelligence v4.0 | "
-        f"Powered by {len(core.llm._available_providers) if core else 0} LLM providers | "
-        f"Total Researches: {core.stats.get('researches_conducted', 0) if core else 0:,} | "
-        f"NES Supply: {ledger.nes_supply if ledger else 0:,} | "
+        f"### ⚛️ Nuclear Intelligence v4.0 | "
+        f"Powered by {provider_count} LLM providers | "
+        f"Total Researches: {research_count:,} | "
+        f"NES Supply: {nes_supply:,} | "
         "Built with Free LLM Providers"
     )
 
@@ -751,10 +871,24 @@ if __name__ == "__main__":
     port = int(os.getenv("GRADIO_PORT", "7860"))
     share = not IS_HF_SPACE  # Don't share in HF Spaces (it's automatic)
 
-    logger.info(f"🚀 Starting Nuclear Intelligence v4.0...")
-    logger.info(f"   HuggingFace Space: {IS_HF_SPACE}")
-    logger.info(f"   Port: {port}")
-    logger.info(f"   Share: {share}")
+    # Check if we have at least one provider
+    has_provider = CORE_AVAILABLE and core and len(core.llm._available_providers) > 0
+    demo_mode = not has_provider
+    
+    print(f"🚀 Starting Nuclear Intelligence v4.0...")
+    print(f"   HuggingFace Space: {IS_HF_SPACE}")
+    print(f"   Port: {port}")
+    print(f"   Share: {share}")
+    if CORE_AVAILABLE and core:
+        print(f"   LLM Providers: {len(core.llm._available_providers)}")
+    
+    if demo_mode:
+        print("⚠️  No LLM providers available. Running in DEMO mode.")
+        print("   Add API keys to .env file for full functionality:")
+        print("   - HF_TOKEN (HuggingFace - already configured)")
+        print("   - DEEPSEEK_API_KEY, GROQ_API_KEY, etc.")
+    else:
+        print(f"✅ Running with {len(core.llm._available_providers)} provider(s)")
 
     demo.launch(
         server_name="0.0.0.0",
@@ -762,4 +896,7 @@ if __name__ == "__main__":
         share=share,
         max_threads=10,
         show_error=True,
+        css=CSS,
+        theme=THEME,
+        head="<meta name='description' content='AI-Powered Nuclear Energy Research with Free LLM Providers'>",
     )

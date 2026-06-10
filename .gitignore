@@ -50,3 +50,6 @@ Thumbs.db
 *secret*
 *token*
 *.key
+# Gradio runtime
+.gradio/
+
