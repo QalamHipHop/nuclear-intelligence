@@ -1,0 +1,76 @@
+name: Nuclear Intelligence Operation Loop v2.0
+
+on:
+  schedule:
+    - cron: '*/45 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -q -r requirements.txt
+
+      - name: Initialize knowledge base
+        run: python scripts/initialize_knowledge_base.py
+
+      - name: Run Nuclear Intelligence Cycle
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          SCIENTIFIC_ACCURACY_THRESHOLD: 93
+          DEVELOPER_MODE: "true"
+          AUTO_START_LOOP: "false"
+        run: |
+          python -c "
+          import sys, os
+          sys.path.insert(0, '.')
+          from core.nuclear_intelligence import NuclearIntelligenceCore
+          from core.operation_loop import OperationLoop, OperationLoopConfig
+          from blockchain.virtual_ledger import VirtualLedger
+
+          core = NuclearIntelligenceCore()
+          ledger = VirtualLedger()
+          config = OperationLoopConfig(
+              interval_minutes=45, min_accuracy=93.0,
+              auto_start=False, developer_mode=True, save_reports=True
+          )
+          op_loop = OperationLoop(core, ledger, config=config)
+          result = op_loop.run_cycle(developer_mode=True)
+          print(f'Cycle {result.cycle_id}: {'Minted' if result.minted else 'Rejected'}')
+          print(f'Accuracy: {result.evaluation.get(\"scientific_accuracy\", 0):.1f}%')
+          print(f'TX: {result.tx_hash or \"None\"}')
+          print(f'Time: {result.execution_time_seconds}s')
+          print(f'LLM Provider: {core.llm._current_provider}')
+          "
+
+      - name: Sync to HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python scripts/sync_huggingface.py || true
+
+      - name: Commit reports
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto: NES cycle report [skip ci]"
+          file_pattern: "reports/cycle_*.json"
+
+  keepalive:
+    runs-on: ubuntu-latest
+    needs: cycle
+    if: always()
+    steps:
+      - name: Ping HF Space
+        run: curl -s -o /dev/null -w "%{http_code}" https://huggingface.co/spaces/Qalam/Nuclear-Intelligence || true

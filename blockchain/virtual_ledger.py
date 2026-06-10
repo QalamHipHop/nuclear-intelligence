@@ -1,206 +1,180 @@
-
-import hashlib
-import json
-import time
-import os
+"""Nuclear Intelligence - Enhanced Virtual Ledger v2.0
+Blockchain with Merkle trees, POW, HMAC signatures, NES minting"""
+import os, json, hashlib, hmac, time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from loguru import logger
 
 class Transaction:
-    def __init__(self, sender: str, recipient: str, amount: float, metadata: Dict[str, Any] = None, timestamp: str = None, signature: str = None):
-        self.sender = sender
-        self.recipient = recipient
-        self.amount = amount
+    def __init__(self, sender: str, recipient: str, amount: float, metadata: Optional[Dict] = None,
+                 timestamp: Optional[str] = None, signature: Optional[str] = None, tx_id: Optional[str] = None):
+        self.sender = sender; self.recipient = recipient; self.amount = amount
         self.timestamp = timestamp or datetime.now().isoformat()
-        self.metadata = metadata if metadata is not None else {}
-        self.signature = signature or self._generate_signature()
+        self.metadata = metadata or {}; self.tx_id = tx_id or self._gen_tx_id()
+        self.signature = signature or self._sign()
 
-    def _generate_signature(self) -> str:
-        # Simplified signature for virtual ledger
-        tx_content = f"{self.sender}{self.recipient}{self.amount}{self.timestamp}{json.dumps(self.metadata, sort_keys=True)}"
-        return hashlib.sha256(tx_content.encode()).hexdigest()
+    def _gen_tx_id(self) -> str:
+        return hashlib.sha256(f"{self.sender}{self.recipient}{self.amount}{self.timestamp}".encode()).hexdigest()[:24]
 
-    def to_dict(self):
-        return {
-            "sender": self.sender,
-            "recipient": self.recipient,
-            "amount": self.amount,
-            "timestamp": self.timestamp,
-            "metadata": self.metadata,
-            "signature": self.signature
-        }
+    def _sign(self) -> str:
+        content = f"{self.tx_id}{self.sender}{self.recipient}{self.amount}{self.timestamp}"
+        secret = os.getenv("BLOCKCHAIN_SECRET", "nuclear-intelligence").encode()
+        return hmac.new(secret, content.encode(), hashlib.sha256).hexdigest()[:64]
+
+    def verify_signature(self) -> bool:
+        return hmac.compare_digest(self.signature, self._sign())
+
+    def to_dict(self) -> Dict:
+        return {"tx_id": self.tx_id, "sender": self.sender, "recipient": self.recipient,
+                "amount": self.amount, "timestamp": self.timestamp, "metadata": self.metadata, "signature": self.signature}
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "Transaction":
+        return cls(data["sender"], data["recipient"], data["amount"], data.get("metadata"),
+                   data.get("timestamp"), data.get("signature"), data.get("tx_id"))
+
+class MerkleTree:
+    def __init__(self, transactions: List[Transaction]):
+        self.transactions = transactions
+        self.merkle_root = self._build()
+
+    def _hash_tx(self, tx: Transaction) -> str:
+        return hashlib.sha256(json.dumps(tx.to_dict(), sort_keys=True).encode()).hexdigest()
+
+    def _build(self) -> str:
+        if not self.transactions:
+            return hashlib.sha256(b"empty").hexdigest()
+        hashes = [self._hash_tx(tx) for tx in self.transactions]
+        while len(hashes) > 1:
+            if len(hashes) % 2: hashes.append(hashes[-1])
+            hashes = [hashlib.sha256((hashes[i] + hashes[i+1]).encode()).hexdigest() for i in range(0, len(hashes), 2)]
+        return hashes[0]
 
 class Block:
-    def __init__(self, index: int, timestamp: str, transactions: List[Transaction], previous_hash: str, nonce: int = 0, hash: str = None):
-        self.index = index
-        self.timestamp = timestamp
-        self.transactions = transactions
-        self.previous_hash = previous_hash
-        self.nonce = nonce
-        self.hash = hash or self.calculate_hash()
+    def __init__(self, index: int, timestamp: str, transactions: List[Transaction],
+                 previous_hash: str, nonce: int = 0, difficulty: int = 4, block_hash: Optional[str] = None):
+        self.index = index; self.timestamp = timestamp; self.transactions = transactions
+        self.previous_hash = previous_hash; self.nonce = nonce; self.difficulty = difficulty
+        self.merkle_tree = MerkleTree(transactions)
+        self.merkle_root = self.merkle_tree.merkle_root
+        self.hash = block_hash or self._compute_hash()
 
-    def calculate_hash(self):
-        block_string = json.dumps({
-            "index": self.index,
-            "timestamp": self.timestamp,
-            "transactions": [tx.to_dict() for tx in self.transactions],
-            "previous_hash": self.previous_hash,
-            "nonce": self.nonce
-        }, sort_keys=True).encode()
-        return hashlib.sha256(block_string).hexdigest()
+    def _compute_hash(self) -> str:
+        return hashlib.sha256(json.dumps({"index": self.index, "timestamp": self.timestamp,
+            "merkle_root": self.merkle_root, "previous_hash": self.previous_hash, "nonce": self.nonce}, sort_keys=True).encode()).hexdigest()
 
-    def to_dict(self):
-        return {
-            "index": self.index,
-            "timestamp": self.timestamp,
-            "transactions": [tx.to_dict() for tx in self.transactions],
-            "previous_hash": self.previous_hash,
-            "nonce": self.nonce,
-            "hash": self.hash
-        }
+    def mine(self, max_attempts: int = 1000000) -> bool:
+        target = "0" * self.difficulty
+        for i in range(max_attempts):
+            self.nonce = i
+            h = self._compute_hash()
+            if h.startswith(target):
+                self.hash = h
+                return True
+        return False
+
+    def to_dict(self) -> Dict:
+        return {"index": self.index, "timestamp": self.timestamp,
+                "transactions": [tx.to_dict() for tx in self.transactions],
+                "merkle_root": self.merkle_root, "previous_hash": self.previous_hash,
+                "nonce": self.nonce, "hash": self.hash, "difficulty": self.difficulty, "tx_count": len(self.transactions)}
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "Block":
+        return cls(data["index"], data["timestamp"],
+                   [Transaction.from_dict(tx) for tx in data.get("transactions", [])],
+                   data["previous_hash"], data.get("nonce", 0), data.get("difficulty", 4), data.get("hash"))
 
 class VirtualLedger:
-    def __init__(self, difficulty=3, ledger_file="knowledge_base/virtual_ledger.json"):
-        self.chain: List[Block] = []
-        self.pending_transactions: List[Transaction] = []
-        self.difficulty = difficulty
-        self.ledger_file = ledger_file
-        self.nes_supply = 0.0
-        
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(self.ledger_file), exist_ok=True)
-
-        # Load existing chain or create genesis block
-        if os.path.exists(self.ledger_file):
-            self._load_chain()
-        else:
-            self.create_genesis_block()
+    def __init__(self, difficulty: int = 4, ledger_file: str = "knowledge_base/virtual_ledger.json"):
+        self.difficulty = difficulty; self.ledger_file = ledger_file
+        self.chain: List[Block] = []; self.pending: List[Transaction] = []
+        self.nes_supply = 0.0; self.total_transactions = 0
+        os.makedirs(os.path.dirname(ledger_file), exist_ok=True)
+        if os.path.exists(ledger_file): self._load_chain()
+        else: self.create_genesis_block()
 
     def create_genesis_block(self):
-        genesis_tx = Transaction("system", "genesis", 0.0, {"note": "Nuclear Intelligence Genesis Block"})
-        genesis_block = Block(0, datetime.now().isoformat(), [genesis_tx], "0")
-        genesis_block.hash = self.proof_of_work(genesis_block)
-        self.chain.append(genesis_block)
-        self._save_chain()
-        logger.info("Genesis block created.")
+        tx = Transaction("system", "genesis", 0.0, {"note": "Nuclear Intelligence Genesis", "version": "2.0"})
+        block = Block(0, datetime.now().isoformat(), [tx], "0" * 64, difficulty=self.difficulty)
+        block.mine()
+        self.chain.append(block); self._save_chain()
+        logger.info(f"Genesis block: {block.hash[:16]}...")
 
-    def get_last_block(self) -> Block:
-        return self.chain[-1]
+    def get_last_block(self) -> Block: return self.chain[-1]
 
-    def add_transaction(self, transaction: Transaction):
-        self.pending_transactions.append(transaction)
-        logger.info(f"Transaction added: {transaction.sender} -> {transaction.recipient} ({transaction.amount} NES)")
+    def add_transaction(self, tx: Transaction) -> bool:
+        if not tx.verify_signature(): logger.warning(f"Invalid signature on {tx.tx_id}"); return False
+        self.pending.append(tx); self.total_transactions += 1
+        logger.info(f"Transaction: {tx.tx_id[:12]} | {tx.sender} → {tx.recipient} ({tx.amount} NES)")
+        return True
 
-    def proof_of_work(self, block: Block):
-        block.nonce = 0
-        computed_hash = block.calculate_hash()
-        while not computed_hash.startswith("0" * self.difficulty):
-            block.nonce += 1
-            computed_hash = block.calculate_hash()
-        return computed_hash
+    def mine_pending(self, miner: str = "system_miner") -> Optional[Block]:
+        if not self.pending: return None
+        last = self.get_last_block()
+        block = Block(last.index + 1, datetime.now().isoformat(), self.pending, last.hash, difficulty=self.difficulty)
+        if block.mine():
+            self.chain.append(block); self.pending = []; self._save_chain()
+            logger.info(f"Block #{block.index} mined. Hash: {block.hash[:16]}... Nonce: {block.nonce}")
+            return block
+        return None
 
-    def mine_pending_transactions(self, miner_address: str = "system_miner") -> Optional[Block]:
-        if not self.pending_transactions:
-            return None
-
-        last_block = self.get_last_block()
-        new_block = Block(
-            index=last_block.index + 1,
-            timestamp=datetime.now().isoformat(),
-            transactions=self.pending_transactions,
-            previous_hash=last_block.hash
-        )
-        new_block.hash = self.proof_of_work(new_block)
-
-        self.chain.append(new_block)
-        self.pending_transactions = [] 
-        self._save_chain()
-        logger.info(f"Block #{new_block.index} mined successfully. Hash: {new_block.hash}")
-        return new_block
-
-    def mint_nes_token(self, metadata: Dict[str, Any]):
-        # Each validated scientific advancement mints exactly 1 NES token
-        mint_transaction = Transaction(
-            sender="knowledge_creation_event",
-            recipient="system_treasury",
-            amount=1.0,
-            metadata=metadata
-        )
-        self.add_transaction(mint_transaction)
-        self.nes_supply += 1.0
-        logger.info(f"1 NES token minted for scientific advancement. Total supply: {self.nes_supply}")
-        self.mine_pending_transactions()
+    def mint_nes_token(self, metadata: Dict[str, Any]) -> Optional[str]:
+        tx = Transaction("knowledge_creation_event", "system_treasury", 1.0, {**metadata, "type": "nes_mint", "mint_time": datetime.now().isoformat()})
+        self.add_transaction(tx)
+        block = self.mine_pending()
+        if block:
+            self.nes_supply += 1.0
+            logger.info(f"NES minted! Total: {self.nes_supply}")
+            return block.hash
+        return None
 
     def is_chain_valid(self) -> bool:
         for i in range(1, len(self.chain)):
-            current_block = self.chain[i]
-            previous_block = self.chain[i-1]
-
-            if current_block.hash != current_block.calculate_hash():
-                logger.error(f"Block {current_block.index} hash mismatch.")
-                return False
-
-            if current_block.previous_hash != previous_block.hash:
-                logger.error(f"Block {current_block.index} previous hash mismatch.")
-                return False
-
-            if not current_block.hash.startswith("0" * self.difficulty):
-                logger.error(f"Block {current_block.index} POW invalid.")
-                return False
+            c, p = self.chain[i], self.chain[i-1]
+            if c.hash != c._compute_hash(): logger.error(f"Block {i} hash mismatch"); return False
+            if c.previous_hash != p.hash: logger.error(f"Block {i} prev hash mismatch"); return False
+            if not c.hash.startswith("0" * c.difficulty): logger.error(f"Block {i} POW invalid"); return False
+            if MerkleTree(c.transactions).merkle_root != c.merkle_root: logger.error(f"Block {i} Merkle mismatch"); return False
         return True
+
+    def get_balance(self, addr: str) -> float:
+        bal = 0.0
+        for block in self.chain:
+            for tx in block.transactions:
+                if tx.recipient == addr: bal += tx.amount
+                if tx.sender == addr: bal -= tx.amount
+        return bal
+
+    def get_transaction_history(self, addr: Optional[str] = None, limit: int = 50) -> List[Dict]:
+        txs = []
+        for block in reversed(self.chain):
+            for tx in block.transactions:
+                if addr is None or tx.sender == addr or tx.recipient == addr:
+                    txs.append({**tx.to_dict(), "block_index": block.index, "block_hash": block.hash})
+        return txs[:limit]
 
     def _save_chain(self):
         try:
-            os.makedirs(os.path.dirname(self.ledger_file), exist_ok=True)
-            with open(self.ledger_file, 'w', encoding='utf-8') as f:
-                json.dump([block.to_dict() for block in self.chain], f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            logger.error(f"Error saving chain: {e}")
+            temp = self.ledger_file + ".tmp"
+            with open(temp, 'w', encoding='utf-8') as f: json.dump([b.to_dict() for b in self.chain], f, ensure_ascii=False, indent=4)
+            os.replace(temp, self.ledger_file)
+        except Exception as e: logger.error(f"Save error: {e}")
 
     def _load_chain(self):
         try:
             with open(self.ledger_file, 'r', encoding='utf-8') as f:
-                chain_data = json.load(f)
-                self.chain = []
-                for block_data in chain_data:
-                    transactions = [
-                        Transaction(
-                            tx['sender'], 
-                            tx['recipient'], 
-                            tx['amount'], 
-                            tx.get('metadata'),
-                            tx.get('timestamp'),
-                            tx.get('signature')
-                        ) 
-                        for tx in block_data['transactions']
-                    ]
-                    block = Block(
-                        block_data['index'], 
-                        block_data['timestamp'], 
-                        transactions, 
-                        block_data['previous_hash'], 
-                        block_data['nonce'], 
-                        block_data['hash']
-                    )
-                    self.chain.append(block)
-                
-                # Calculate NES supply
-                self.nes_supply = sum(
-                    tx.amount for block in self.chain for tx in block.transactions 
-                    if tx.recipient == "system_treasury" and tx.sender == "knowledge_creation_event"
-                )
-            logger.info(f"Ledger loaded. Supply: {self.nes_supply} NES, Blocks: {len(self.chain)}")
+                self.chain = [Block.from_dict(b) for b in json.load(f)]
+            self.nes_supply = sum(tx.amount for block in self.chain for tx in block.transactions if tx.sender == "knowledge_creation_event" and tx.recipient == "system_treasury")
+            self.total_transactions = sum(len(b.transactions) for b in self.chain)
+            logger.info(f"Ledger loaded: {len(self.chain)} blocks, {self.nes_supply} NES, {self.total_transactions} TX")
         except Exception as e:
-            logger.error(f"Failed to load ledger: {e}")
-            self.create_genesis_block()
+            logger.error(f"Load error: {e}"); self.chain = []; self.create_genesis_block()
 
-    def get_balance(self, address: str) -> float:
-        balance = 0.0
-        for block in self.chain:
-            for tx in block.transactions:
-                if tx.recipient == address:
-                    balance += tx.amount
-                if tx.sender == address:
-                    balance -= tx.amount
-        return balance
+    def export_chain(self, path: Optional[str] = None) -> str:
+        path = path or self.ledger_file.replace(".json", "_export.json")
+        with open(path, 'w', encoding='utf-8') as f: json.dump({"export_time": datetime.now().isoformat(), "chain_length": len(self.chain), "nes_supply": self.nes_supply, "total_transactions": self.total_transactions, "blocks": [b.to_dict() for b in self.chain]}, f, indent=4, ensure_ascii=False)
+        return path
+
+    def get_stats(self) -> Dict[str, Any]:
+        return {"chain_length": len(self.chain), "nes_supply": self.nes_supply, "pending_transactions": len(self.pending), "total_transactions": self.total_transactions, "difficulty": self.difficulty, "latest_hash": self.get_last_block().hash[:16]+"...", "genesis_hash": self.chain[0].hash[:16]+"...", "chain_valid": self.is_chain_valid()}
