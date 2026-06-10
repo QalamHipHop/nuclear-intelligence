@@ -10,6 +10,7 @@ from app import demo, core, ledger, op_loop
 from api.enhanced_api import app, init_components
 import threading
 import uvicorn
+import gradio as gr
 
 # Initialize API components
 init_components(core, ledger, op_loop)

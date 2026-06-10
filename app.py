@@ -45,18 +45,24 @@ def get_stats():
     )
 
 def get_blockchain_df():
-    data = []
-    for block in reversed(ledger.chain):
-        for tx in block.transactions:
-            data.append({
-                "Index": block.index,
-                "Timestamp": block.timestamp[:19],
-                "Sender": tx.sender,
-                "Recipient": tx.recipient,
-                "Amount": tx.amount,
-                "Hash": block.hash[:12] + "..."
-            })
-    return pd.DataFrame(data)
+    try:
+        data = []
+        if not ledger or not ledger.chain:
+            return pd.DataFrame(columns=["Index", "Timestamp", "Sender", "Recipient", "Amount", "Hash"])
+        for block in reversed(ledger.chain):
+            for tx in block.transactions:
+                data.append({
+                    "Index": block.index,
+                    "Timestamp": block.timestamp[:19] if block.timestamp else "",
+                    "Sender": tx.sender,
+                    "Recipient": tx.recipient,
+                    "Amount": tx.amount,
+                    "Hash": (block.hash[:12] + "...") if block.hash else ""
+                })
+        return pd.DataFrame(data)
+    except Exception as e:
+        logger.error(f"Error getting blockchain df: {e}")
+        return pd.DataFrame(columns=["Index", "Timestamp", "Sender", "Recipient", "Amount", "Hash"])
 
 def start_background_loop():
     if not op_loop.is_running:

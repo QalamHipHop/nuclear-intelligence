@@ -43,13 +43,22 @@ class KnowledgeGraph:
         if os.path.exists(self.path):
             try:
                 with open(self.path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    content = f.read()
+                    if not content.strip():
+                        logger.warning("Knowledge Graph file is empty. Initializing new graph.")
+                        return
+                    data = json.loads(content)
                     if isinstance(data, dict) and "entities" in data and "relationships" in data:
                         self.graph = data
                     else:
                         logger.warning("Invalid Knowledge Graph format. Initializing new graph.")
             except Exception as e:
                 logger.error(f"Error loading Knowledge Graph: {e}")
+                # Backup corrupted file if possible
+                try:
+                    os.rename(self.path, self.path + ".bak")
+                except:
+                    pass
 
     def _save(self):
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
@@ -79,7 +88,7 @@ class NuclearIntelligenceCore:
         model_name: str = None,
         vector_db_path: str = "knowledge_base/faiss_index"
     ):
-        model_name = model_name or os.getenv("LLM_MODEL", "gpt-4.1-mini")
+        model_name = model_name or os.getenv("LLM_MODEL", "gpt-4o-mini")
         self.llm = ChatOpenAI(model=model_name, temperature=0.7)
         self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         self.vector_db_path = vector_db_path

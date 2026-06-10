@@ -151,8 +151,12 @@ class VirtualLedger:
         return True
 
     def _save_chain(self):
-        with open(self.ledger_file, 'w', encoding='utf-8') as f:
-            json.dump([block.to_dict() for block in self.chain], f, ensure_ascii=False, indent=4)
+        try:
+            os.makedirs(os.path.dirname(self.ledger_file), exist_ok=True)
+            with open(self.ledger_file, 'w', encoding='utf-8') as f:
+                json.dump([block.to_dict() for block in self.chain], f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            logger.error(f"Error saving chain: {e}")
 
     def _load_chain(self):
         try:
