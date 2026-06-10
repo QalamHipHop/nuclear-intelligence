@@ -17,7 +17,6 @@ tags:
   - groq
   - fusion
 license: mit
-emoji: atom
 gpu: false
 ---
 

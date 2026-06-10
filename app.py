@@ -27,6 +27,7 @@ import hashlib
 import random
 from datetime import datetime
 from pathlib import Path
+from typing import Optional, Dict, List, Any
 
 # ─── Environment Detection ───────────────────────────────────────
 IS_HF_SPACE = bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE"))
