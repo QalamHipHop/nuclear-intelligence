@@ -1,4 +1,4 @@
-# Nuclear Intelligence v3.0 - HuggingFace Space Config
+# Nuclear Intelligence v4.0 - HuggingFace Space Configuration
 app_file: app.py
 title: Nuclear Intelligence
 emoji: atom
@@ -13,4 +13,8 @@ tags:
   - knowledge-graph
   - LLM
   - free-models
+  - deepseek
+  - groq
 license: mit
+emoji: atom
+gpu: false
