@@ -99,4 +99,4 @@ with gr.Blocks(title="Nuclear Intelligence Dashboard", theme=gr.themes.Soft()) a
 if __name__ == "__main__":
     # Start loop automatically on launch
     threading.Thread(target=op_loop.start, daemon=True).start()
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)

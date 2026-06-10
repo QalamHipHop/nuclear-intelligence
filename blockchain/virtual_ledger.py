@@ -8,13 +8,13 @@ from typing import List, Dict, Any, Optional
 from loguru import logger
 
 class Transaction:
-    def __init__(self, sender: str, recipient: str, amount: float, metadata: Dict[str, Any] = None):
+    def __init__(self, sender: str, recipient: str, amount: float, metadata: Dict[str, Any] = None, timestamp: str = None, signature: str = None):
         self.sender = sender
         self.recipient = recipient
         self.amount = amount
-        self.timestamp = datetime.now().isoformat()
+        self.timestamp = timestamp or datetime.now().isoformat()
         self.metadata = metadata if metadata is not None else {}
-        self.signature = self._generate_signature()
+        self.signature = signature or self._generate_signature()
 
     def _generate_signature(self) -> str:
         # Simplified signature for virtual ledger
@@ -161,7 +161,14 @@ class VirtualLedger:
                 self.chain = []
                 for block_data in chain_data:
                     transactions = [
-                        Transaction(tx['sender'], tx['recipient'], tx['amount'], tx['metadata']) 
+                        Transaction(
+                            tx['sender'], 
+                            tx['recipient'], 
+                            tx['amount'], 
+                            tx.get('metadata'),
+                            tx.get('timestamp'),
+                            tx.get('signature')
+                        ) 
                         for tx in block_data['transactions']
                     ]
                     block = Block(
