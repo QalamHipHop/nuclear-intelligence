@@ -1,5 +1,5 @@
 """
-Nuclear Intelligence v3.0 - Advanced Operation Loop
+Nuclear Intelligence v1.0.0 - Advanced Operation Loop
 ═══════════════════════════════════════════════════════════════════
 Autonomous research-to-tokenization with:
 - Multi-stage pipeline

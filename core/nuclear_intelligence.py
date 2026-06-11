@@ -1,5 +1,5 @@
 """
-Nuclear Intelligence v3.0 - Advanced AI Research Engine
+Nuclear Intelligence v1.0.0 - Advanced AI Research Engine
 ═══════════════════════════════════════════════════════════════════
 Multi-model LLM, Advanced RAG, Knowledge Graph, Multi-Layer Evaluation
 Enhanced with cross-domain reasoning, real-time monitoring, and more
@@ -282,7 +282,7 @@ class NuclearIntelligenceCore:
         # Log initialization
         provider_count = len(self.llm._available_providers)
         providers = ", ".join(self.llm._available_providers) or "None"
-        logger.info(f"⚛️ Nuclear Intelligence Core v3.0 initialized")
+        logger.info(f"⚛️ Nuclear Intelligence Core v1.0.0 initialized")
         logger.info(f"   Providers: {providers} ({provider_count} available)")
 
     def _init_vectorstore(self):

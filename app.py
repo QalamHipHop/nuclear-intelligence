@@ -1,5 +1,5 @@
 """
-Nuclear Intelligence v4.0 Enhanced - HuggingFace Space Optimized ⚛️
+Nuclear Intelligence v1.0.0 (Nuclear Intelligence) ⚛️
 ═══════════════════════════════════════════════════════════════════
 ✅ Fixed for HF Spaces - Lightweight, Fast, Reliable
 ✅ 10 Free LLM Providers with Auto-Fallback
@@ -14,7 +14,7 @@ Optimized for HuggingFace Spaces with:
 - Real-time stats and monitoring
 - Enhanced visualizations
 
-Author: QalamHipHop | License: MIT
+Author: Qalam | License: MIT\nIdeology: Nuclear Intelligence is a tool for democratizing and rapidly expanding nuclear energy knowledge as the foundation for a future of abundance, clean, secure, and digital civilization.
 ═══════════════════════════════════════════════════════════════════
 """
 

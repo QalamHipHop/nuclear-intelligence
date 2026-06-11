@@ -314,8 +314,8 @@ class VirtualLedger:
             recipient=self.SYSTEM_TREASURY,
             amount=0.0,
             metadata={
-                "note": "Nuclear Intelligence Genesis Block v3.0",
-                "version": "3.0",
+                "note": "Nuclear Intelligence Genesis Block v1.0.0",
+                "version": "1.0.0",
                 "timestamp": datetime.now().isoformat(),
                 "difficulty": self.difficulty,
                 "system": "Nuclear Intelligence Virtual Blockchain",

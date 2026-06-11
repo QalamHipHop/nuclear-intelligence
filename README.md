@@ -21,7 +21,7 @@ emoji: atom
 gpu: false
 ---
 
-# Nuclear Intelligence v4.0 ⚛️
+# Nuclear Intelligence v1.0.0 ⚛️
 
 **AI-Powered Nuclear Energy Research & NES Token System**
 
@@ -64,7 +64,7 @@ All dependencies are pre-installed. Main packages:
 ## 🏗️ Architecture
 
 ```
-Nuclear Intelligence v4.0
+Nuclear Intelligence v1.0.0
 ├── LLM Engine         - 10-provider multi-model routing
 ├── Research Core      - RAG + evaluation pipeline
 ├── Knowledge Graph    - Entity management & search
