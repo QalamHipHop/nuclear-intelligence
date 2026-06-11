@@ -245,7 +245,7 @@ class LLMEngine:
             "total_tokens_used": 0,
             "cache_stats": {},
         }
-        self._current_provider: Optional[str] = None
+        self._current_provider_name: Optional[str] = None
         self._last_error: Optional[str] = None
         self._provider_health: Dict[str, Dict] = {}
         self.cache = LRUCache(max_size=200)
@@ -312,6 +312,10 @@ class LLMEngine:
         if provider == "huggingface" and not api_key.startswith("hf_"):
             return False
         return True
+
+    @property
+    def _current_provider(self):
+        return self._current_provider_name
 
     def _get_best_provider(self) -> Optional[str]:
         """Get the best available provider based on priority and health"""
@@ -794,7 +798,7 @@ class LLMEngine:
                         total = 0
                     self._stats["total_tokens_used"] += total
 
-                    self._current_provider = provider_name
+                    self._current_provider_name = provider_name
 
                     if self.enable_caching and cache_key_prompt:
                         self.cache.set(cache_key_prompt, model or "default", temperature, result)
