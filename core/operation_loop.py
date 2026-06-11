@@ -207,6 +207,7 @@ class OperationLoop:
                     tx_hash = self.ledger.mint_nes_token({
                         "cycle_id": cycle_id,
                         "question": question.to_dict(),
+                        "answer": answer.to_dict(),
                         "evaluation": evaluation.to_dict(),
                         "overall_score": mint_check["overall"],
                         "checks_passed": mint_check["passed"],
