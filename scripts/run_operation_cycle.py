@@ -1,70 +1,77 @@
-
 #!/usr/bin/env python3
 """
-Run a single Nuclear Intelligence operation cycle.
-This script executes one complete cycle of the operation loop.
+Nuclear Intelligence - Run Operation Cycle (Self-contained)
+Uses the lightweight HF-deploy compatible core for fast, reliable cycles.
 """
-
 import os
 import sys
 import json
-import logging
-from datetime import datetime
 from pathlib import Path
 
-# Add parent directory to path
+# Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from core.nuclear_intelligence import NuclearIntelligenceCore
-from core.operation_loop import OperationLoop, OperationLoopConfig
-from blockchain.virtual_ledger import VirtualLedger
-
-# Configure logging
-log_dir = Path(__file__).parent.parent / "logs"
-log_dir.mkdir(exist_ok=True)
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+sys.path.insert(0, str(Path(__file__).parent.parent / "hf_deploy"))
 
 
-def main():
-    logging.info("=" * 80)
-    logging.info("NUCLEAR INTELLIGENCE OPERATION CYCLE")
-    logging.info("=" * 80)
-    logging.info(f"Start time: {datetime.now().isoformat()}")
-    
-    try:
-        # Initialize core components
-        logging.info("Initializing Nuclear Intelligence Core...")
-        ni_core = NuclearIntelligenceCore()
-        
-        logging.info("Initializing Virtual Ledger...")
-        virtual_ledger = VirtualLedger()
+def run_cycle():
+    """Run a single research cycle using the HF-deploy compatible core."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "hf_app",
+        str(Path(__file__).parent.parent / "hf_deploy" / "app.py"),
+    )
+    hf_app = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hf_app)
 
-        # Configure the operation loop
-        op_config = OperationLoopConfig(
-            min_accuracy=float(os.getenv("SCIENTIFIC_ACCURACY_THRESHOLD", "93.0")),
-            interval_minutes=int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", "30"))
-        )
-        
-        logging.info("Initializing Operation Loop...")
-        operation_loop = OperationLoop(ni_core, virtual_ledger, op_config)
-        
-        # Execute one cycle
-        logging.info("Executing operation cycle...")
-        operation_loop.run_cycle()
-        
-        logging.info("Operation cycle completed successfully.")
-        logging.info(f"End time: {datetime.now().isoformat()}")
-        logging.info("=" * 80)
-        
-        return 0
-        
-    except Exception as e:
-        logging.error(f"Critical error during operation cycle: {e}", exc_info=True)
-        logging.error("=" * 80)
+    core = hf_app.core
+    if not core:
+        print("❌ Core not initialized")
         return 1
+
+    print("══════════════════════════════════════")
+    print("⚛️  Nuclear Intelligence v4.0 - Research Cycle")
+    print("══════════════════════════════════════")
+    print(f"Providers: {core.llm._available}")
+    print(f"Current NES supply: {core.ledger.nes_supply}")
+    print()
+
+    # Run cycle
+    result = core.run_cycle(dev_mode=True)
+
+    status = "✅ MINTED" if result["minted"] else "❌ REJECTED"
+    print(f"\n{'='*50}")
+    print(f"CYCLE RESULT: {status}")
+    print(f"{'='*50}")
+    print(f"Cycle ID:    {result['cycle_id']}")
+    print(f"Provider:    {result['research']['provider']}")
+    print(f"Time:        {result['execution_time_seconds']}s")
+    print()
+    print("Question:")
+    print(f"  [{result['question']['category']}] {result['question']['question']}")
+    print()
+    print("Scores:")
+    eval_data = result["evaluation"]
+    print(f"  Accuracy:    {eval_data['scientific_accuracy']:.1f}%")
+    print(f"  Novelty:     {eval_data['novelty_score']:.1f}%")
+    print(f"  Usefulness:  {eval_data['usefulness_score']:.1f}%")
+    print(f"  Completeness:{eval_data['completeness']:.1f}%")
+    print(f"  Overall:     {result['overall']:.1f}%")
+    print()
+    if result.get("tx_hash"):
+        print(f"TX Hash:     {result['tx_hash'][:40]}...")
+        print(f"NES Minted:  +100.0 (total: {core.ledger.nes_supply})")
+    print(f"{'='*50}\n")
+
+    # Save report
+    os.makedirs("reports", exist_ok=True)
+    prefix = "cycle_minted" if result["minted"] else "cycle_rejected"
+    report_file = f"reports/{prefix}_{result['cycle_id']}.json"
+    with open(report_file, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=2, ensure_ascii=False)
+    print(f"📄 Report saved: {report_file}")
+
+    return 0 if result["minted"] else 0
 
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    sys.exit(run_cycle())

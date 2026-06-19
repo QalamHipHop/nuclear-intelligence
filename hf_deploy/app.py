@@ -114,9 +114,14 @@ class LLMEngine:
             "priority": 3, "max_tokens": 8192, "color": "🟡"
         },
         "huggingface": {
-            "name": "HuggingFace", "env": "HF_TOKEN",
-            "base": "https://api-inference.huggingface.co/models", "model": "Qwen/Qwen2.5-72B-Instruct",
-            "priority": 10, "max_tokens": 2048, "color": "🟤"
+            "name": "HuggingFace Router", "env": "HF_TOKEN",
+            "base": "https://router.huggingface.co/v1", "model": "meta-llama/Llama-3.3-70B-Instruct",
+            "priority": 4, "max_tokens": 8192, "color": "🟣"
+        },
+        "huggingface_free": {
+            "name": "HuggingFace Free (Qwen)", "env": "HF_TOKEN",
+            "base": "https://router.huggingface.co/v1", "model": "Qwen/Qwen2.5-72B-Instruct",
+            "priority": 5, "max_tokens": 4096, "color": "🟤"
         },
     }
     
@@ -136,18 +141,20 @@ class LLMEngine:
                 valid = True
                 if name == "groq" and not key.startswith("gsk_"): valid = False
                 if name == "deepseek" and not (key.startswith("sk-") or key.startswith("ghp_")): valid = False
-                if name == "huggingface" and not key.startswith("hf_"): valid = False
+                if name in ("huggingface", "huggingface_free") and not key.startswith("hf_"): valid = False
                 if name == "aimlapi" and len(key) < 20: valid = False
-                
+
                 if valid:
-                    self._available.append(name)
+                    if name not in self._available:
+                        self._available.append(name)
                     self._health[name] = {"status": "active", "failures": 0, "latency": 0}
-        
+
         if not self._available:
             hf_key = os.getenv("HF_TOKEN", "").strip()
             if hf_key and hf_key.startswith("hf_"):
-                self._available = ["huggingface"]
-        
+                # In HF Spaces, the HF token is always available — use it as primary
+                self._available = ["huggingface", "huggingface_free"]
+
         if not self._available:
             self._available = ["demo"]
     
@@ -184,7 +191,7 @@ class LLMEngine:
                     if system:
                         messages.append({"role": "system", "content": system})
                     messages.append({"role": "user", "content": prompt})
-                    
+
                     if provider in ("aimlapi", "deepseek", "groq"):
                         from openai import OpenAI
                         client = OpenAI(api_key=api_key, base_url=cfg["base"])
@@ -192,10 +199,28 @@ class LLMEngine:
                         content = resp.choices[0].message.content
                         self._record_success(provider, time.time() - start, content)
                         return content
-                    
+
+                    if provider in ("huggingface", "huggingface_free"):
+                        # HuggingFace Inference API (OpenAI-compatible router)
+                        from openai import OpenAI
+                        client = OpenAI(
+                            api_key=api_key,
+                            base_url="https://router.huggingface.co/v1",
+                        )
+                        resp = client.chat.completions.create(
+                            model=cfg["model"],
+                            messages=messages,
+                            temperature=temperature,
+                            max_tokens=cfg["max_tokens"],
+                        )
+                        content = resp.choices[0].message.content
+                        self._record_success(provider, time.time() - start, content)
+                        return content
+
             except Exception as e:
                 if provider in self._health:
                     self._health[provider]["failures"] += 1
+                logger.warning(f"Provider {provider} failed: {e}")
                 continue
         
         self._stats["failures"] += 1
@@ -603,22 +628,30 @@ def run_cycle(dev_mode=True):
         result = core.run_cycle(dev_mode)
         status = "✅ **MINTED**" if result["minted"] else "❌ **REJECTED**"
         eval_data = result["evaluation"]
+        cycle_id_short = result["cycle_id"][:16]
+        provider_name = result["research"]["provider"]
+        exec_time = result["execution_time_seconds"]
+        overall_score = result["overall"]
+        question_text = result["question"]["question"]
+        question_cat = result["question"]["category"]
+        question_diff = result["question"]["difficulty"]
         output = [
             f"## {status}",
-            f"**Cycle:** `{result["cycle_id"][:16]}`",
-            f"**Provider:** `{result["research"]["provider"]}`",
-            f"**Time:** {result['execution_time_seconds']}s",
-            f"\n### 📝 Question",
-            result["question"]["question"],
-            f"\n**Category:** `{result['question']['category']}` | **Difficulty:** `{result['question']['difficulty']}/10`",
-            f"\n### 📊 Scores",
+            f"**Cycle:** `{cycle_id_short}`",
+            f"**Provider:** `{provider_name}`",
+            f"**Time:** {exec_time}s",
+            "\n### 📝 Question",
+            question_text,
+            f"\n**Category:** `{question_cat}` | **Difficulty:** `{question_diff}/10`",
+            "\n### 📊 Scores",
             f"- 🔬 Accuracy: **{eval_data['scientific_accuracy']:.1f}%**",
             f"- 💡 Novelty: **{eval_data['novelty_score']:.1f}%**",
             f"- 👍 Usefulness: **{eval_data['usefulness_score']:.1f}%**",
-            f"- **🎯 Overall: {result['overall']:.1f}%**",
+            f"- **🎯 Overall: {overall_score:.1f}%**",
         ]
         if result.get("tx_hash"):
-            output.append(f"\n**🔗 TX:** `{result['tx_hash'][:40]}...`")
+            tx_short = result["tx_hash"][:40]
+            output.append(f"\n**🔗 TX:** `{tx_short}...`")
         return "\n".join(output)
     except Exception as e:
         return f"❌ Error: {str(e)}"
@@ -688,7 +721,7 @@ CSS = """
 .rejected { color: #ef4444; }
 """
 
-with gr.Blocks(title="Nuclear Intelligence v4.0", css=CSS) as demo:
+with gr.Blocks(title="Nuclear Intelligence v4.0") as demo:
     gr.Markdown("# ⚛️ Nuclear Intelligence", elem_id="title")
     
     with gr.Row():
@@ -739,4 +772,4 @@ with gr.Blocks(title="Nuclear Intelligence v4.0", css=CSS) as demo:
     search_btn.click(search_kg, inputs=search_input, outputs=search_out)
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=PORT)
+    demo.launch(server_name="0.0.0.0", server_port=PORT, css=CSS)

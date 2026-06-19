@@ -1,13 +1,13 @@
-name: ⚛️ Nuclear Intelligence Operation Loop v4.0
+name: ⚛️ Nuclear Intelligence Operation Loop
 
 on:
+  # Run every 30 minutes for always-online autonomous operation
   schedule:
-    # Run every 30 minutes - optimized for always-online
     - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
-      force_category:
-        description: 'Force category (optional)'
+      force_provider:
+        description: 'Force provider (optional: huggingface, huggingface_free)'
         required: false
         default: ''
   push:
@@ -19,7 +19,7 @@ env:
 jobs:
   cycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository
@@ -43,13 +43,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -q -r requirements.txt
 
       - name: Initialize knowledge base
         run: python scripts/initialize_knowledge_base.py || true
 
-      - name: Run Nuclear Intelligence Cycle
+      - name: Run Nuclear Intelligence Research Cycle
         id: cycle
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -62,90 +62,26 @@ jobs:
           FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
           BLOCKCHAIN_SECRET: ${{ secrets.BLOCKCHAIN_SECRET }}
-          SCIENTIFIC_ACCURACY_THRESHOLD: 85
-          MIN_NOVELTY_THRESHOLD: 65
-          MIN_USEFULNESS_THRESHOLD: 70
-          MIN_OVERALL_SCORE: 75
-          MIN_COMPLETENESS_THRESHOLD: 50
           DEVELOPER_MODE: "true"
-          AUTO_START_LOOP: "false"
         run: |
-          python -c "
-          import sys, os
-          sys.path.insert(0, '.')
-          from core.nuclear_intelligence_v4 import NuclearIntelligenceCore
-          from core.operation_loop_v4 import OperationLoop, OperationLoopConfig
-          from blockchain.virtual_ledger import VirtualLedger
+          python scripts/run_operation_cycle.py
 
-          print('🚀 Initializing Nuclear Intelligence v4.0...')
-          core = NuclearIntelligenceCore()
-          ledger = VirtualLedger()
-          
-          config = OperationLoopConfig(
-              interval_minutes=30,
-              min_accuracy=float(os.getenv('SCIENTIFIC_ACCURACY_THRESHOLD', 85)),
-              min_novelty=float(os.getenv('MIN_NOVELTY_THRESHOLD', 65)),
-              min_usefulness=float(os.getenv('MIN_USEFULNESS_THRESHOLD', 70)),
-              min_overall=float(os.getenv('MIN_OVERALL_SCORE', 75)),
-              min_completeness=float(os.getenv('MIN_COMPLETENESS_THRESHOLD', 50)),
-              auto_start=False,
-              developer_mode=True,
-              save_reports=True,
-              sync_to_hf=True,
-              sync_to_gh=True,
-          )
-          
-          op_loop = OperationLoop(core, ledger, config=config)
-          
-          # Run the cycle
-          category = '''${{ github.event.inputs.force_category }}''' if '''${{ github.event.inputs.force_category }}''' else ''
-          result = op_loop.run_cycle(developer_mode=True, force_category=category)
-          
-          print()
-          print('='*50)
-          print(f'📊 CYCLE RESULT: {\"MINTED ✅\" if result.minted else \"REJECTED ❌\"}')
-          print('='*50)
-          print(f'Cycle ID: {result.cycle_id}')
-          print(f'Provider: {core.llm._current_provider_name}')
-          print(f'Time: {result.execution_time_seconds}s')
-          print()
-          print('📊 Scores:')
-          print(f'  Accuracy: {result.evaluation.get(\"scientific_accuracy\", 0):.1f}%')
-          print(f'  Novelty: {result.evaluation.get(\"novelty_score\", 0):.1f}%')
-          print(f'  Usefulness: {result.evaluation.get(\"usefulness_score\", 0):.1f}%')
-          print(f'  Completeness: {result.evaluation.get(\"completeness\", 0):.1f}%')
-          print()
-          if result.tx_hash:
-              print(f'💰 TX Hash: {result.tx_hash[:40]}...')
-          if result.error:
-              print(f'❌ Error: {result.error}')
-          print('='*50)
-          
-          # Output for GitHub Actions
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write(f'minted={str(result.minted).lower()}\n')
-              f.write(f'cycle_id={result.cycle_id}\n')
-              f.write(f'provider={core.llm._current_provider_name or \"none\"}\n')
-              f.write(f'execution_time={result.execution_time_seconds}\n')
-          "
-
-      - name: Sync to HuggingFace
-        if: steps.cycle.outputs.minted == 'true'
+      - name: Sync to HuggingFace Dataset
+        if: always()
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           python scripts/sync_huggingface.py || true
 
-      - name: Commit reports and updates
+      - name: Commit reports
+        if: always()
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "🤖 Auto: NES cycle report - ${{ steps.cycle.outputs.cycle_id }}"
+          commit_message: "🤖 Auto: NES research cycle - ${{ github.run_id }}"
           file_pattern: |
             reports/*.json
             knowledge_base/*.json
-            knowledge_base/*.bin
-          skip_dirty: false
-          push_options: '--force'
+          skip_dirty: true
 
   keepalive:
     runs-on: ubuntu-latest
@@ -157,25 +93,7 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://huggingface.co/spaces/Qalam/Nuclear-Intelligence)
           echo "HF Space Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "⚠️ HF Space not responding, retrying..."
-            sleep 5
+            echo "⚠️ HF Space not responding, retrying in 10s..."
+            sleep 10
             curl -s -o /dev/null -w "%{http_code}" https://huggingface.co/spaces/Qalam/Nuclear-Intelligence
           fi
-
-  report:
-    runs-on: ubuntu-latest
-    needs: cycle
-    if: always() && needs.cycle.outputs.minted == 'true'
-    steps:
-      - name: Create Cycle Summary
-        run: |
-          echo "## ⚛️ Nuclear Intelligence Cycle Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Cycle ID | \`${{ needs.cycle.outputs.cycle_id }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Provider | \`${{ needs.cycle.outputs.provider }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Execution Time | ${{ needs.cycle.outputs.execution_time }}s |" >> $GITHUB_STEP_SUMMARY
-          echo "| Result | ✅ **MINTED** |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "![Nuclear Intelligence](https://img.shields.io/badge/Nuclear-Intelligence-v4.0-blue)" >> $GITHUB_STEP_SUMMARY
