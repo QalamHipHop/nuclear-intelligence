@@ -1,4 +1,4 @@
-# ⚛️ Nuclear Intelligence v5.0
+# ⚛️ Nuclear Intelligence v4.0
 
 > Autonomous nuclear-energy research pipeline that turns validated Q&A into on-chain NES tokens.
 
@@ -9,6 +9,17 @@
 3. **Evaluates** every answer with an independent LLM call (multi-layer: accuracy, novelty, usefulness, completeness, self-consistency).
 4. **Mints** a NES token on a real SHA-3 Proof-of-Work blockchain for every answer that passes the thresholds.
 5. **Syncs** all minted records to a public HuggingFace Dataset *and* the GitHub repo, so the corpus is openly readable.
+
+## 🛡️ v4.0 Highlights (June 2026)
+
+- **Safety & Ethics Guardrails** — hard pre-LLM + post-generation filter; refuses weapons / proliferation / RDD / cyber-proliferation prompts and redirects to legitimate peaceful-use topics.
+- **Enhanced Evaluation** — multi-pass self-consistency, citation-quality scoring, novelty vs Knowledge Graph, and a Tokenization-Readiness composite (Accuracy ≥ 93 %, Novelty ≥ 75 %, Usefulness ≥ 80 %, Overall ≥ 85 %).
+- **Enhanced RAG** — domain weighting (IAEA 2.5×, NRC 2.5×, peer-reviewed 1.7–1.8×), recency boost, diversity round-robin.
+- **Multilingual** — automatic Persian / English detection + localized UI labels.
+- **Security** — hardcoded API keys removed from `app.py` and LLM engines; all keys now flow through `.env` only.
+- **Health Check** — `python scripts/health_check.py` runs 9 smoke tests; available in the Gradio UI under **🛡️ Safety & Health**.
+
+See [CHANGELOG_V4.md](CHANGELOG_V4.md) for the full release notes.
 
 ---
 
