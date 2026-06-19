@@ -24,6 +24,7 @@ import plotly.express as px
 # Load environment
 from dotenv import load_dotenv
 load_dotenv()
+os.environ["AIMLAPI_API_KEY"] = "bd510ec538561ec582dc003b6070cf6d"
 
 # Add current dir to path
 sys.path.insert(0, str(Path(__file__).parent))

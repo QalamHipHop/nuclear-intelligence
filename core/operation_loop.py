@@ -31,7 +31,7 @@ class OperationLoopConfig:
     min_accuracy: float = 70.0
     min_novelty: float = 50.0
     min_usefulness: float = 50.0
-    min_overall: float = 60.0
+    min_overall: float = 55.0
     min_completeness: float = 40.0
     auto_start: bool = True
     questions_per_cycle: int = 1

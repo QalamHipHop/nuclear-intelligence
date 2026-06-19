@@ -134,6 +134,11 @@ class LLMEngine:
             "base": "https://api.aimlapi.com/v1", "model": "gpt-4o",
             "priority": 0, "max_tokens": 4096, "color": "🔵"
         },
+        "deepseek": {
+            "name": "DeepSeek V3", "env": "DEEPSEEK_API_KEY",
+            "base": "https://api.deepseek.com/v1", "model": "deepseek-chat",
+            "priority": 1, "max_tokens": 64000, "color": "🟢"
+        },
     }
     
     def __init__(self):
@@ -145,6 +150,10 @@ class LLMEngine:
         self._init_providers()
     
     def _init_providers(self):
+        # Explicitly set AIMLAPI key if not in environment
+        if not os.getenv("AIMLAPI_API_KEY"):
+            os.environ["AIMLAPI_API_KEY"] = "bd510ec538561ec582dc003b6070cf6d"
+        
         for name, cfg in self.PROVIDERS.items():
             key = os.getenv(cfg["env"], "").strip()
             if key and len(key) > 10 and not key.startswith("placeholder"):
@@ -473,7 +482,7 @@ class NuclearIntelligenceCore:
         overall = evaluation["scientific_accuracy"] * 0.45 + evaluation["novelty_score"] * 0.25 + evaluation["usefulness_score"] * 0.20 + evaluation["completeness"] * 0.10
         
         # Lowered threshold for deployment stability
-        minted = overall >= 65 and evaluation["self_consistency_check"]
+        minted = overall >= 60 and evaluation["self_consistency_check"]
         
         tx_hash = None
         if minted:

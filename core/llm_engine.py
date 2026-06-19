@@ -263,6 +263,10 @@ class LLMEngine:
 
     def _init_providers(self):
         """Check which providers have valid API keys"""
+        # Explicitly set AIMLAPI key if not in environment
+        if not os.getenv("AIMLAPI_API_KEY"):
+            os.environ["AIMLAPI_API_KEY"] = "bd510ec538561ec582dc003b6070cf6d"
+            
         logger.info("🔍 Checking LLM providers...")
         available = []
         for name in self.provider_chain:
