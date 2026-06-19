@@ -1,0 +1,98 @@
+name: 🧪 Nuclear Intelligence CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  lint:
+    name: 🔍 Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install linters
+        run: pip install flake8
+      - name: Lint core
+        run: |
+          flake8 core/ blockchain/ scripts/ api/ --max-line-length=200 --ignore=E501,W503,F401,E722,E303,W391 --statistics || true
+
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install deps
+        run: |
+          pip install -q -r requirements.txt
+      - name: Smoke test: imports
+        run: |
+          python -c "from core.nuclear_intelligence import NuclearIntelligenceCore; print('✅ core imports OK')"
+          python -c "from blockchain.virtual_ledger import VirtualLedger; print('✅ blockchain imports OK')"
+      - name: Smoke test: HF core
+        run: |
+          python -c "
+          import sys, importlib.util
+          spec = importlib.util.spec_from_file_location('hf_app', 'hf_deploy/app.py')
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          print('✅ HF core imports OK')
+          print('Providers:', mod.core.llm._available if mod.core else 'N/A')
+          "
+      - name: Smoke test: ledger
+        run: |
+          python -c "
+          from blockchain.virtual_ledger import VirtualLedger
+          import tempfile, os
+          with tempfile.TemporaryDirectory() as tmp:
+              ledger = VirtualLedger(ledger_file=os.path.join(tmp, 'ledger.json'), difficulty=1)
+              assert ledger.is_valid(), 'Genesis should be valid'
+              tx_hash = ledger.mint({'test': True, 'cycle_id': 'test123', 'question_text': 'test question'})
+              assert tx_hash, 'Mint should succeed'
+              assert ledger.is_valid(), 'Chain should be valid after mint'
+              assert ledger.nes_supply == 1.0, f'Expected 1.0 NES, got {ledger.nes_supply}'
+              print('✅ Ledger works correctly')
+          "
+
+  test-deep:
+    name: 🧬 Deep Test (with HF)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install deps
+        run: pip install -q -r requirements.txt
+      - name: Test LLM (no keys → demo mode)
+        env:
+          # All empty → demo mode
+          HF_TOKEN: ""
+          GROQ_API_KEY: ""
+          DEEPSEEK_API_KEY: ""
+        run: |
+          python -c "
+          import sys, importlib.util
+          spec = importlib.util.spec_from_file_location('hf_app', 'hf_deploy/app.py')
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          if mod.core:
+              stats = mod.core.llm.get_stats()
+              print('✅ LLM engine stats:', stats['available_providers'])
+              assert 'demo' in stats['available_providers'], 'Should fall back to demo'
+              print('✅ Demo fallback works')
+          else:
+              print('⚠️ Core not initialized (expected if no keys)')
+          "

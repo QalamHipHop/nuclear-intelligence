@@ -1,0 +1,93 @@
+name: 🚀 Deploy to HuggingFace Space
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "hf_deploy/**"
+      - ".github/workflows/deploy-hf.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: hf-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 🚀 Sync to HF Space
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📤 Push to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "⚠️ HF_TOKEN not set, skipping deploy"
+            exit 0
+          fi
+          pip install -q huggingface_hub
+          python - <<'PYEOF'
+          import os
+          from pathlib import Path
+          from huggingface_hub import HfApi, upload_folder
+
+          hf_token = os.environ["HF_TOKEN"]
+          space_id = os.environ.get("SPACE_ID", "Qalam/Nuclear-Intelligence")
+          api = HfApi(token=hf_token)
+
+          # Sync only the hf_deploy/ folder + required top-level files
+          print(f"Deploying to space: {space_id}")
+          
+          # First, create a clean staging dir
+          staging = Path("/tmp/space_stage")
+          if staging.exists():
+              import shutil
+              shutil.rmtree(staging)
+          staging.mkdir(parents=True, exist_ok=True)
+
+          # Copy hf_deploy contents to root of staging
+          hf_deploy = Path("hf_deploy")
+          if hf_deploy.exists():
+              for f in hf_deploy.iterdir():
+                  dst = staging / f.name
+                  if f.is_file():
+                      dst.write_bytes(f.read_bytes())
+                  else:
+                      import shutil
+                      shutil.copytree(f, dst)
+          
+          # Copy supporting files from root
+          for fname in ["requirements.txt", "README.md", ".env.template"]:
+              src = Path(fname)
+              if src.exists():
+                  (staging / fname).write_bytes(src.read_bytes())
+
+          # Make app.py point to hf_deploy's app.py if needed
+          if not (staging / "app.py").exists():
+              (staging / "app.py").write_bytes(hf_deploy.joinpath("app.py").read_bytes())
+
+          # Use lighter HF requirements
+          if (hf_deploy / "requirements.txt").exists():
+              (staging / "requirements.txt").write_bytes((hf_deploy / "requirements.txt").read_bytes())
+
+          # Upload
+          upload_folder(
+              folder_path=str(staging),
+              repo_id=space_id,
+              repo_type="space",
+              token=hf_token,
+              commit_message="Auto: deploy Nuclear Intelligence v5.0",
+          )
+          print(f"✅ Deployed to https://huggingface.co/spaces/{space_id}")
+          PYEOF

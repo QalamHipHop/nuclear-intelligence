@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Data
+knowledge_base/*.json
+!knowledge_base/*.template.json
+reports/
+*.db
+
+# FAISS
+knowledge_base/faiss_index/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Docker
+.dockerignore
+
+# Secrets
+*secret*
+*token*
+*.key
+# Gradio runtime
+.gradio/
+
+
+# Environment files
+.env
+.env.local
+*.env

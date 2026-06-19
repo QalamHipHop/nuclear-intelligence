@@ -1,0 +1,44 @@
+# Nuclear Intelligence v3.0 - Docker Compose
+version: '3.8'
+
+services:
+  nuclear-intelligence:
+    build: .
+    container_name: nuclear-intelligence
+    ports:
+      - "7860:7860"  # Gradio UI
+      - "8000:8000"  # FastAPI
+    environment:
+      - DEVELOPER_MODE=true
+      - AUTO_START_LOOP=true
+      - OPERATION_LOOP_INTERVAL_MINUTES=30
+      - SCIENTIFIC_ACCURACY_THRESHOLD=93.0
+      # Add your API keys here or in .env file
+      - HF_TOKEN=${HF_TOKEN}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./knowledge_base:/app/knowledge_base
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Keep-alive pinger
+  keep-alive:
+    image: alpine:latest
+    command: |
+      while true; do
+        echo "Pinging HuggingFace Space..."
+        curl -s -o /dev/null -w "%{http_code}" https://huggingface.co/spaces/Qalam/Nuclear-Intelligence
+        sleep 1500
+      done
+    depends_on:
+      - nuclear-intelligence
+    restart: unless-stopped
