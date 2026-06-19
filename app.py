@@ -27,7 +27,9 @@ from dotenv import load_dotenv
 
 # Load environment
 load_dotenv()
-os.environ["AIMLAPI_API_KEY"] = "bd510ec538561ec582dc003b6070cf6d"
+# NOTE: Hardcoded keys removed (security fix). All keys now come from .env / secrets:
+#   AIMLAPI_API_KEY, HF_TOKEN, GROQ_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY,
+#   TOGETHER_API_KEY, FIREWORKS_API_KEY. See .env.template for the full list.
 
 # Add current dir to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -36,6 +38,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 from core.nuclear_intelligence_v4 import NuclearIntelligenceCore
 from core.operation_loop_v4 import OperationLoop, OperationLoopConfig
 from blockchain.virtual_ledger import VirtualLedger
+from core.safety_guard import check_query, check_answer as check_answer_safety
+from core.evaluation_enhanced import (
+    assess_citation_quality, consistency_report,
+    novelty_against_kg, tokenization_readiness,
+)
+from core.i18n import detect_language, t as tr, PERSIAN_SYSTEM_PROMPT
 
 # ─── Global State ──────────────────────────────────────────────────
 core = None
@@ -191,41 +199,79 @@ def toggle_auto_loop(active):
 def ask_question(question, dev_mode=True):
     if not core:
         return "❌ System initializing..."
-    
+
     if len(question.strip()) < 5:
         return "❌ Please enter a valid question (5+ characters)"
-    
+
+    # ── Safety pre-filter (weapons / proliferation / dirty-bomb / etc.) ──
+    verdict = check_query(question)
+    if not verdict.allowed:
+        return verdict.message
+
+    # ── Locale detection (Persian → fa labels) ──
+    locale = detect_language(question)
+
     try:
         result = core.ask_question(question, developer_mode=dev_mode)
         eval_data = result["evaluation"]
-        
+        answer_text = result.get("answer", "")
+
+        # ── Safety post-filter on the generated answer ──
+        out_verdict = check_answer_safety(answer_text)
+        if not out_verdict.allowed:
+            return out_verdict.message
+
+        # ── Enhanced evaluation: citation quality ──
+        cq = assess_citation_quality(answer_text, result.get("citations", []))
+        # Single-pass consistency (for live UI we don't re-query N times)
+        try:
+            from core.nuclear_intelligence_v4 import EvaluationScore
+            ev_obj = EvaluationScore(
+                scientific_accuracy=float(eval_data.get("scientific_accuracy", 0)),
+                novelty_score=float(eval_data.get("novelty_score", 0)),
+                usefulness_score=float(eval_data.get("usefulness_score", 0)),
+                self_consistency_check=True,
+                justification=eval_data.get("justification", ""),
+                completeness=float(eval_data.get("completeness", 0)),
+            )
+            tr_obj = tokenization_readiness(ev_obj, consistency=None, citation_quality=cq)
+        except Exception:
+            tr_obj = None
+
         output = [
-            f"## 🔬 Research Answer",
-            f"\n**Provider:** `{result['provider']}`",
-            f"\n### 📖 Question",
+            f"## {tr('research_label', locale)}",
+            f"\n**Provider:** `{result.get('provider','?')}` | **Locale:** `{locale}`",
+            f"\n### 📖 {tr('summary_label', locale)}",
             question,
             f"\n### 📝 Answer",
-            result['answer'][:3000] + ("..." if len(result['answer']) > 3000 else ""),
-            f"\n### 📊 Quality Assessment",
-            f"- 🔬 Accuracy: **{eval_data['scientific_accuracy']:.1f}%**",
-            f"- 💡 Novelty: **{eval_data['novelty_score']:.1f}%**",
-            f"- 👍 Usefulness: **{eval_data['usefulness_score']:.1f}%**",
-            f"- **🎯 Overall: {eval_data['overall_score']:.1f}%**",
-            f"\n### 📚 Citations",
+            answer_text[:3000] + ("..." if len(answer_text) > 3000 else ""),
+            f"\n### 📊 {tr('overall_label', locale)} Quality",
+            f"- 🔬 {tr('accuracy_label', locale)}: **{eval_data['scientific_accuracy']:.1f}%**",
+            f"- 💡 {tr('novelty_label', locale)}: **{eval_data['novelty_score']:.1f}%**",
+            f"- 👍 {tr('usefulness_label', locale)}: **{eval_data['usefulness_score']:.1f}%**",
+            f"- 📦 Completeness: **{eval_data.get('completeness', 0):.1f}%**",
+            f"- 📚 Citation Quality: **{cq.score:.1f}%** (trusted {cq.trusted_ratio*100:.0f}%, DOI: {cq.has_doi})",
+            f"- **🎯 {tr('overall_label', locale)}: {eval_data['overall_score']:.1f}%**",
         ]
-        
+        if tr_obj is not None:
+            output.append(f"\n### 🪙 Tokenization Readiness")
+            output.append(f"**Score:** {tr_obj.overall:.1f}% | **Ready to mint:** {tr_obj.ready_to_mint}")
+            if tr_obj.notes:
+                output.append(f"**Notes:** {', '.join(tr_obj.notes)}")
+
+        output.append(f"\n### 📚 {tr('citations_label', locale)}")
         for cite in result.get('citations', [])[:5]:
             output.append(f"- {cite}")
-        
+
         if dev_mode and result.get('developer_analysis'):
             dev = result['developer_analysis']
             output.append(f"\n### 🔬 Developer Analysis")
             output.append(f"**Confidence:** `{dev.get('confidence_level', 'N/A')}`")
             if dev.get('cross_domain'):
                 output.append(f"**Cross-Domain:** {', '.join(dev['cross_domain'][:3])}")
-        
+
         return "\n".join(output)
-        
+
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
@@ -499,10 +545,64 @@ with gr.Blocks(title="Nuclear Intelligence v4.0", css=CSS, theme=gr.themes.Soft(
                     history_table = gr.DataFrame(value=get_cycle_history, wrap=True)
                     refresh_history = gr.Button("🔄 Refresh")
                     refresh_history.click(get_cycle_history, outputs=history_table)
-                    
+
                     with gr.Row():
                         chart1 = gr.Plot(get_category_chart)
                         chart2 = gr.Plot(get_score_chart)
+
+                with gr.Tab("🛡️ Safety & Health"):
+                    gr.Markdown("### 🛡️ Safety Policy Self-Check")
+                    gr.Markdown(
+                        "This panel tests the *pre-LLM* and *post-generation* "
+                        "safety filters. **The model never sees a refused prompt**; "
+                        "instead the user is redirected to the legitimate "
+                        "peaceful-use side of the topic."
+                    )
+                    with gr.Row():
+                        safety_test_input = gr.Textbox(
+                            label="Test a prompt",
+                            placeholder="e.g. 'How to enrich uranium beyond 90 percent'",
+                            scale=4,
+                        )
+                        safety_test_btn = gr.Button("🧪 Run Safety Check", variant="primary", scale=1)
+                    safety_test_out = gr.Markdown()
+
+                    def _safety_check(q: str) -> str:
+                        if not q or len(q.strip()) < 4:
+                            return "❌ Enter a prompt first."
+                        v = check_query(q)
+                        if v.allowed:
+                            return (
+                                f"✅ **ALLOWED**\n\n"
+                                f"**Category:** none\n"
+                                f"**Risk:** none\n\n"
+                                f"This prompt passes the safety guard and would be "
+                                f"forwarded to the LLM pipeline."
+                            )
+                        return (
+                            f"🛑 **REFUSED** — category `{v.category}`\n\n"
+                            f"**Risk:** {v.risk}\n\n"
+                            f"**Matched phrases:** {', '.join(v.matched_phrases) or '-'}\n\n"
+                            f"**Redirected topic:** {v.redirect}\n\n"
+                            f"---\n\n{v.message}"
+                        )
+                    safety_test_btn.click(_safety_check, inputs=safety_test_input, outputs=safety_test_out)
+
+                    gr.Markdown("### 🩺 Pipeline Health Check")
+                    health_btn = gr.Button("🏃 Run Self-Test", variant="secondary")
+                    health_out = gr.Markdown()
+
+                    def _run_health() -> str:
+                        import subprocess
+                        result = subprocess.run(
+                            [sys.executable, "scripts/health_check.py"],
+                            cwd=str(Path(__file__).parent),
+                            capture_output=True, text=True, timeout=60,
+                        )
+                        body = result.stdout or result.stderr or "(no output)"
+                        status = "✅ ALL PASS" if result.returncode == 0 else f"❌ exit={result.returncode}"
+                        return f"```text\n{body}\n```\n\n**Status:** {status}"
+                    health_btn.click(_run_health, outputs=health_out)
     
     # Event Handlers
     refresh_stats.click(get_stats, outputs=stats_box)

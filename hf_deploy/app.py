@@ -1280,6 +1280,32 @@ def ask_q(question, dev_mode=False):
         return "❌ System initializing..."
     if not question or len(question.strip()) < 5:
         return "❌ Enter a valid question (5+ chars)"
+
+    # ── Inline safety guard (mirrors core/safety_guard.py) ───────────
+    # Lightweight subset: weapons / enrichment / RDD / cyber. The full
+    # taxonomy lives in the main app; this is a defensive tripwire.
+    _danger = re.compile(
+        r"\b(nuclear\s+(?:bomb|warhead|weapon)\s+(?:design|build|make|diy)|"
+        r"how\s+to\s+(?:build|make)\s+(?:a\s+)?(?:atom|nuclear|hydrogen)\s+bomb|"
+        r"clandestine\s+(?:enrichment|centrifuge)|"
+        r"weapons[-\s]?grade\s+uranium\s+(?:production|route)|"
+        r"dirty\s+bomb\s+(?:design|build|make|instructions)|"
+        r"implosion\s+lens\s+design|"
+        r"smuggl(?:e|ing)\s+(?:heu|weapons[-\s]?grade|plutonium)|"
+        r"Stuxnet[-\s]?like\s+attack\s+instructions)\b",
+        re.IGNORECASE,
+    )
+    if _danger.search(question):
+        return (
+            "🛡️ **I can't help with that.**\n\n"
+            "Your question touches on activity restricted under "
+            "international non-proliferation norms (NPT, IAEA safeguards, "
+            "NSG). Sharing actionable detail there would be unsafe.\n\n"
+            "**What I *can* help with** — the legitimate peaceful-use side — "
+            "is the IAEA safeguards framework, civilian enrichment under "
+            "monitoring, and radiation-protection topics. Want me to answer that instead?"
+        )
+
     try:
         result = core.ask_question(question, dev_mode)
         ev = result.get("evaluation", {})
