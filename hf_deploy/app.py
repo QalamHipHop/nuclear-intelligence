@@ -129,6 +129,11 @@ class LLMEngine:
             "base": "https://api-inference.huggingface.co/models", "model": "Qwen/Qwen2.5-72B-Instruct",
             "priority": 10, "max_tokens": 2048, "color": "🟤"
         },
+        "aimlapi": {
+            "name": "AIMLAPI", "env": "AIMLAPI_KEY",
+            "base": "https://api.aimlapi.com/v1", "model": "gpt-4o",
+            "priority": 0, "max_tokens": 4096, "color": "🔵"
+        },
     }
     
     def __init__(self):
@@ -148,6 +153,7 @@ class LLMEngine:
                 if name == "groq" and not key.startswith("gsk_"): valid = False
                 if name == "deepseek" and not (key.startswith("sk-") or key.startswith("ghp_")): valid = False
                 if name == "huggingface" and not key.startswith("hf_"): valid = False
+                if name == "aimlapi" and len(key) < 20: valid = False
                 
                 if valid:
                     self._available.append(name)
@@ -202,6 +208,13 @@ class LLMEngine:
                             json={"model": cfg["model"], "messages": messages, "temperature": temperature, "max_tokens": cfg["max_tokens"]},
                             timeout=180
                         )
+                    elif provider == "aimlapi":
+                        from openai import OpenAI
+                        client = OpenAI(api_key=api_key, base_url=cfg["base"])
+                        resp = client.chat.completions.create(model=cfg["model"], messages=messages, temperature=temperature, max_tokens=cfg["max_tokens"])
+                        content = resp.choices[0].message.content
+                        self._record_success(provider, time.time() - start, content)
+                        return content
                     else:
                         from openai import OpenAI
                         client = OpenAI(api_key=api_key, base_url=cfg["base"])
