@@ -134,11 +134,6 @@ class LLMEngine:
             "base": "https://api.aimlapi.com/v1", "model": "gpt-4o",
             "priority": 0, "max_tokens": 4096, "color": "🔵"
         },
-        "deepseek": {
-            "name": "DeepSeek V3", "env": "DEEPSEEK_API_KEY",
-            "base": "https://api.deepseek.com/v1", "model": "deepseek-chat",
-            "priority": 1, "max_tokens": 64000, "color": "🟢"
-        },
     }
     
     def __init__(self):
@@ -150,9 +145,12 @@ class LLMEngine:
         self._init_providers()
     
     def _init_providers(self):
-        # Explicitly set AIMLAPI key if not in environment
+        # Ensure AIMLAPI key is read from environment if not already present
         if not os.getenv("AIMLAPI_API_KEY"):
-            os.environ["AIMLAPI_API_KEY"] = "bd510ec538561ec582dc003b6070cf6d"
+            logger.warning("AIMLAPI_API_KEY not found in environment. Please set it in Hugging Face Space secrets.")
+        # Ensure HF_TOKEN is read from environment if not already present
+        if not os.getenv("HF_TOKEN"):
+            logger.warning("HF_TOKEN not found in environment. Please set it in Hugging Face Space secrets.")
         
         for name, cfg in self.PROVIDERS.items():
             key = os.getenv(cfg["env"], "").strip()
@@ -651,7 +649,8 @@ def run_cycle(dev_mode=True):
         eval_data = result["evaluation"]
         output = [
             f"## {status}",
-            f"**Cycle:** `{result['cycle_id'][:16]}`",
+            f"**Cycle:** `{result["cycle_id"][:16]}`",
+            f"**Provider:** `{result["research"]["provider"]}`",
             f"**Time:** {result['execution_time_seconds']}s",
             f"\n### 📝 Question",
             result["question"]["question"],
