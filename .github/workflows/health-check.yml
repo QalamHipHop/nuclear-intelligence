@@ -1,0 +1,44 @@
+name: 🩺 Nuclear Intelligence — Health Check
+
+on:
+  schedule:
+    # Every 6 hours: catch regressions in the safety / RAG / eval layers.
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "core/**"
+      - "scripts/health_check.py"
+      - "app.py"
+      - "hf_deploy/app.py"
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Install minimal deps for self-test
+        run: |
+          python -m pip install --upgrade pip
+          # health_check.py only needs loguru (already in requirements.txt) for noise-free logs.
+          pip install loguru
+
+      - name: 🩺 Run self-test
+        run: |
+          python scripts/health_check.py
+
+      - name: 📝 Annotate summary on failure
+        if: failure()
+        run: |
+          echo "::warning::Nuclear Intelligence health check failed. See logs above."
+          echo "Common fixes:"
+          echo "  - Re-run locally: python scripts/health_check.py"
+          echo "  - Make sure new safety / RAG / i18n modules export the public symbols expected by the test."
