@@ -1,3 +1,14 @@
+---
+title: Nuclear Intelligence
+emoji: ⚛️
+colorFrom: yellow
+colorTo: red
+sdk: gradio
+sdk_version: 4.36.0
+app_file: app.py
+pinned: false
+---
+
 # ⚛️ Nuclear Intelligence v4.0
 
 > Autonomous nuclear-energy research pipeline that turns validated Q&A into on-chain NES tokens.
