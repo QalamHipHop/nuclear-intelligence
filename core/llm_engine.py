@@ -122,12 +122,12 @@ PROVIDERS: Dict[str, LLMProvider] = {
         rate_limit_rpm=30, max_tokens=2048, context_window=32768,
         description="🟤 HuggingFace Inference API - Your token active!"
     ),
-    "qalam_hf": LLMProvider(
-        "Qalam HF Space", "HF_TOKEN",
-        "https://huggingface.co/spaces/Qalam/Nuclear-Intelligence",
-        "nuclear-intelligence", 11,
-        rate_limit_rpm=30, max_tokens=4096, context_window=32768,
-        description="⚛️ Qalam Nuclear Intelligence HF Space"
+    "aimlapi": LLMProvider(
+        "AIMLAPI", "AIMLAPI_API_KEY",
+        "https://api.aimlapi.com/v1",
+        "gpt-4o", 0,
+        rate_limit_rpm=100, max_tokens=4096, context_window=128000,
+        description="🔵 AIMLAPI - GPT-4o Power"
     ),
 }
 
@@ -239,9 +239,10 @@ class LLMEngine:
     ):
         # Priority order: Best free models first
         self.provider_chain = provider_chain or [
-            "deepseek", "groq", "cerebras", "gemini", "fireworks",
+            "aimlapi", "deepseek", "groq", "cerebras", "gemini", "fireworks",
             "together", "novita", "openrouter", "cloudflare", "huggingface"
         ]
+        self._current_provider_name = "aimlapi" if "aimlapi" in self.provider_chain else None
         self.default_temperature = default_temperature
         self.enable_caching = enable_caching
         self.enable_rate_limiting = enable_rate_limiting
@@ -318,6 +319,8 @@ class LLMEngine:
         if provider == "deepseek" and not (api_key.startswith("sk-") or api_key.startswith("ghp_")):
             return False
         if provider == "huggingface" and not api_key.startswith("hf_"):
+            return False
+        if provider == "aimlapi" and len(api_key) < 20:
             return False
         return True
 
@@ -621,6 +624,35 @@ class LLMEngine:
             logger.warning(f"⚠️ Cloudflare failed: {e}")
         return None
 
+    def _call_aimlapi(self, messages: List[Dict], model: str, temperature: float, max_tokens: int) -> Optional[Dict]:
+        """AIMLAPI - GPT-4o Power"""
+        try:
+            from openai import OpenAI
+            provider = PROVIDERS["aimlapi"]
+            api_key = os.getenv(provider.api_key_env)
+            client = OpenAI(api_key=api_key, base_url=provider.api_base)
+            response = client.chat.completions.create(
+                model=model or provider.default_model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=min(max_tokens, provider.max_tokens),
+            )
+            usage = response.usage or {}
+            return {
+                "content": response.choices[0].message.content,
+                "provider": "aimlapi",
+                "model": response.model,
+                "usage": {
+                    "prompt_tokens": usage.prompt_tokens or 0,
+                    "completion_tokens": usage.completion_tokens or 0,
+                    "total_tokens": usage.total_tokens or 0,
+                },
+                "finish_reason": response.choices[0].finish_reason,
+            }
+        except Exception as e:
+            logger.warning(f"⚠️ AIMLAPI failed: {e}")
+        return None
+
     def _call_huggingface(self, messages: List[Dict], model: str, temperature: float, max_tokens: int) -> Optional[Dict]:
         """HuggingFace Inference API - Enhanced with better model detection"""
         try:
@@ -740,6 +772,7 @@ class LLMEngine:
             "openrouter": lambda: self._call_openrouter(messages, model, temperature, max_tokens),
             "cloudflare": lambda: self._call_cloudflare(messages, model, temperature, max_tokens),
             "huggingface": lambda: self._call_huggingface(messages, model, temperature, max_tokens),
+            "aimlapi": lambda: self._call_aimlapi(messages, model, temperature, max_tokens),
         }
 
         result = calls.get(provider_name, lambda: None)()

@@ -130,7 +130,7 @@ class LLMEngine:
             "priority": 10, "max_tokens": 2048, "color": "🟤"
         },
         "aimlapi": {
-            "name": "AIMLAPI", "env": "AIMLAPI_KEY",
+            "name": "AIMLAPI", "env": "AIMLAPI_API_KEY",
             "base": "https://api.aimlapi.com/v1", "model": "gpt-4o",
             "priority": 0, "max_tokens": 4096, "color": "🔵"
         },

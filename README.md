@@ -45,7 +45,7 @@ This project is optimized for **Hugging Face Spaces**.
 Set the following secrets in your environment:
 - `HF_TOKEN`: Hugging Face access token.
 - `GH_TOKEN`: GitHub personal access token.
-- `DEEPSEEK_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`: For LLM inference.
+- `AIMLAPI_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`: For LLM inference.
 
 ## 📄 License
 MIT License | Developed by **Qalam**
