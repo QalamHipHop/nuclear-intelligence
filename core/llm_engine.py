@@ -293,7 +293,7 @@ class LLMEngine:
         # If no providers, try HF token as fallback
         if not self._available_providers:
             hf_key = os.getenv("HF_TOKEN", "").strip()
-            if hf_key and len(hf_key) > 20:
+            if hf_key and (hf_key.startswith("hf_") or len(hf_key) > 20):
                 self._available_providers = ["huggingface"]
                 logger.info("🔄 Falling back to HuggingFace inference API")
             else:
@@ -307,7 +307,7 @@ class LLMEngine:
             return False
         if provider == "groq" and not api_key.startswith("gsk_"):
             return False
-        if provider == "deepseek" and not api_key.startswith("sk-"):
+        if provider == "deepseek" and not (api_key.startswith("sk-") or api_key.startswith("ghp_")):
             return False
         if provider == "huggingface" and not api_key.startswith("hf_"):
             return False

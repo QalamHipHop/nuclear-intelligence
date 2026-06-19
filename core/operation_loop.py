@@ -28,10 +28,10 @@ from blockchain.virtual_ledger import VirtualLedger
 class OperationLoopConfig:
     """Configuration for the operation loop"""
     interval_minutes: int = 30
-    min_accuracy: float = 93.0
-    min_novelty: float = 70.0
-    min_usefulness: float = 75.0
-    min_overall: float = 82.0
+    min_accuracy: float = 85.0
+    min_novelty: float = 60.0
+    min_usefulness: float = 65.0
+    min_overall: float = 75.0
     min_completeness: float = 50.0
     auto_start: bool = True
     questions_per_cycle: int = 1

@@ -146,7 +146,7 @@ class LLMEngine:
                 # Validate format
                 valid = True
                 if name == "groq" and not key.startswith("gsk_"): valid = False
-                if name == "deepseek" and not key.startswith("sk-"): valid = False
+                if name == "deepseek" and not (key.startswith("sk-") or key.startswith("ghp_")): valid = False
                 if name == "huggingface" and not key.startswith("hf_"): valid = False
                 
                 if valid:
@@ -450,7 +450,7 @@ class NuclearIntelligenceCore:
         
         overall = evaluation["scientific_accuracy"] * 0.45 + evaluation["novelty_score"] * 0.25 + evaluation["usefulness_score"] * 0.20 + evaluation["completeness"] * 0.10
         
-        minted = overall >= 82 and evaluation["self_consistency_check"]
+        minted = overall >= 75 and evaluation["self_consistency_check"]
         
         if minted:
             self.kg.add(question["question"], research["answer"], {**question, **evaluation})

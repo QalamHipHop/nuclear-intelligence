@@ -69,22 +69,48 @@ def get_stats():
     c_stats = core.stats
     loop_stats = op_loop.get_stats()
     
+    active_provider = core.llm._current_provider
+    available = core.llm._available_providers
+    
+    provider_display = active_provider if active_provider else "None (Check Keys)"
+    if not active_provider and available:
+        provider_display = f"None (Ready: {', '.join(available)})"
+    elif not available:
+        provider_display = "❌ No Providers Available"
+
     return {
         "NES Supply": f"{l_stats['nes_supply']} NES",
         "Blocks": l_stats['chain_length'],
         "Knowledge Entities": len(core.kg.graph.get("entities", {})),
         "Cycles": loop_stats['total_cycles'],
-        "Active Provider": core.llm._current_provider or "None",
-        "Auto-Loop": "ACTIVE" if op_loop.is_running else "PAUSED"
+        "Active Provider": provider_display,
+        "Auto-Loop": "ACTIVE" if op_loop.is_running else "PAUSED",
+        "Last Error": core.llm._last_error or "None"
     }
 
 def run_manual_cycle():
-    result = op_loop.run_cycle(developer_mode=True)
-    status = "✅ Minted" if result.minted else "❌ Rejected"
-    msg = f"Cycle {result.cycle_id}: {status}\nAccuracy: {result.evaluation.get('scientific_accuracy', 0):.1f}%\nProvider: {core.llm._current_provider}"
-    if result.minted:
-        msg += f"\nTX Hash: {result.tx_hash}"
-    return msg
+    try:
+        result = op_loop.run_cycle(developer_mode=True)
+        status = "✅ Minted" if result.minted else "❌ Rejected"
+        provider = core.llm._current_provider or "None"
+        accuracy = result.evaluation.get('scientific_accuracy', 0)
+        
+        msg = f"Cycle {result.cycle_id}: {status}\n"
+        msg += f"Accuracy: {accuracy:.1f}% | Provider: {provider}\n"
+        
+        if not result.minted:
+            msg += f"Reason: {result.evaluation.get('justification', 'Below threshold')}\n"
+            if provider == "None":
+                msg += "⚠️ Warning: No LLM provider succeeded. Check API keys and network.\n"
+        
+        if result.minted:
+            msg += f"TX Hash: {result.tx_hash}\n"
+            msg += f"Novelty: {result.evaluation.get('novelty_score', 0):.1f}%"
+            
+        return msg
+    except Exception as e:
+        logger.exception("Manual cycle failed")
+        return f"❌ Error running cycle: {str(e)}"
 
 def toggle_auto_loop(active):
     if active:
