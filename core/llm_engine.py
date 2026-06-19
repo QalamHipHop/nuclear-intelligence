@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from loguru import logger
 from collections import defaultdict
+import re
 
 # ─── Provider Definitions ───────────────────────────────────────
 
@@ -120,6 +121,13 @@ PROVIDERS: Dict[str, LLMProvider] = {
         "Qwen/Qwen2.5-72B-Instruct", 10,
         rate_limit_rpm=30, max_tokens=2048, context_window=32768,
         description="🟤 HuggingFace Inference API - Your token active!"
+    ),
+    "qalam_hf": LLMProvider(
+        "Qalam HF Space", "HF_TOKEN",
+        "https://huggingface.co/spaces/Qalam/Nuclear-Intelligence",
+        "nuclear-intelligence", 11,
+        rate_limit_rpm=30, max_tokens=4096, context_window=32768,
+        description="⚛️ Qalam Nuclear Intelligence HF Space"
     ),
 }
 
