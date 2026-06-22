@@ -37,12 +37,60 @@ try:
     import pandas as pd
     from loguru import logger as _loguru_logger
     logger = _loguru_logger
-    import plotly.express as px
+    try:
+        import plotly.express as px
+    except Exception as _e:
+        print(f"WARNING: plotly import failed: {_e}")
+        px = None
     gradio_available = True
 except ImportError as e:
     print(f"WARNING: Missing dependency: {e}")
     print("Install with: pip install gradio pandas loguru plotly")
     gradio_available = False
+except Exception as e:
+    # HF Space often hits: huggingface_hub.HfFolder removed in >=0.26
+    # Gradio 4.36 oauth.py imports HfFolder, so we patch around it.
+    print(f"WARNING: Gradio import crashed: {type(e).__name__}: {e}")
+    try:
+        # Lazy-grab gradio without oauth submodule
+        import sys
+        import importlib
+        # Pre-stub huggingface_hub.HfFolder so oauth import doesn't fail
+        try:
+            import huggingface_hub as _hf
+            if not hasattr(_hf, 'HfFolder'):
+                class _HfFolder:
+                    @staticmethod
+                    def get_token():
+                        return None
+                    @staticmethod
+                    def save_token(token):
+                        pass
+                _hf.HfFolder = _HfFolder
+        except Exception:
+            pass
+        # Try the actual import
+        import gradio as gr
+        # Try pandas
+        try:
+            import pandas as pd
+        except Exception:
+            pd = None
+        # Try loguru
+        try:
+            from loguru import logger as _loguru_logger
+            logger = _loguru_logger
+        except Exception:
+            pass
+        try:
+            import plotly.express as px
+        except Exception:
+            px = None
+        gradio_available = True
+        print(f"INFO: Gradio recovered via HfFolder shim (version={gr.__version__})")
+    except Exception as e2:
+        print(f"FATAL: Could not import Gradio even with shim: {type(e2).__name__}: {e2}")
+        gradio_available = False
 
 try:
     from dotenv import load_dotenv
