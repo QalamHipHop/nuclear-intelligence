@@ -1,12 +1,25 @@
 {
-  "categories": [
-    "nuclear_physics",
-    "reactor_engineering",
-    "safety_management",
-    "economics",
-    "modern_applications"
-  ],
-  "total_entries": 71,
-  "last_updated": "2026-06-09T12:22:09.666561",
-  "version": "0.1.0"
+    "version": "4.0.0",
+    "indexed_domains": [
+        "Nuclear Physics",
+        "Reactor Engineering",
+        "Fusion Science",
+        "Nuclear Safety",
+        "Fuel Cycle",
+        "Waste Management",
+        "Nuclear Medicine",
+        "Materials Science",
+        "Economics"
+    ],
+    "categories": [
+        "fusion",
+        "fission",
+        "safety",
+        "waste",
+        "medicine"
+    ],
+    "statistics": {
+        "total_topics": 5,
+        "total_domains": 9
+    }
 }

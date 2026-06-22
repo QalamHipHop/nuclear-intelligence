@@ -1,21 +1,40 @@
 {
+    "version": "4.0.0",
     "entities": {
-        "e282f2f115e7": {
-            "question": "How can advanced machine learning algorithms integrated with real-time plasma diagnostics optimize magnetic confinement configurations to achieve sustained net-positive energy gain in tokamak fusion reactors under varying operational conditions?",
-            "answer_summary": "Achieving sustained net-positive energy gain (Q > 1) in tokamak fusion reactors hinges critically on optimizing magnetic confinement to maintain plasma stability and maximize fusion power output under...",
+        "a52f754adb3a552c": {
+            "id": "a52f754adb3a552c",
+            "question": "What is the current status of tokamak plasma confinement?",
+            "answer": "Tokamak fusion reactors have achieved significant milestones in plasma confinement, with recent advances in Q-factor improvements and extended pulse operations.",
             "metadata": {
-                "category": "Physics",
-                "difficulty": 10,
-                "accuracy": 95.0
+                "category": "Fusion",
+                "difficulty": 8,
+                "scientific_accuracy": 92.0,
+                "novelty_score": 78.0,
+                "usefulness_score": 85.0,
+                "created": "2026-06-22T21:06:57.770135"
             },
-            "timestamp": "2026-06-10T13:08:09.427695"
+            "created": "2026-06-22T21:06:57.770140"
+        },
+        "1d94037a7442ae1b": {
+            "id": "1d94037a7442ae1b",
+            "question": "How do molten salt reactors achieve passive safety?",
+            "answer": "Molten salt reactors (MSRs) achieve passive safety through their thermal properties - the salt freezes if cooling fails, stopping the reaction naturally.",
+            "metadata": {
+                "category": "Engineering",
+                "difficulty": 7,
+                "scientific_accuracy": 94.0,
+                "novelty_score": 82.0,
+                "usefulness_score": 88.0,
+                "created": "2026-06-22T21:06:57.770144"
+            },
+            "created": "2026-06-22T21:06:57.770146"
         }
     },
-    "relationships": [
-        {
-            "from": "e282f2f115e7",
-            "to": "Physics",
-            "type": "belongs_to"
-        }
-    ]
+    "relationships": [],
+    "metadata": {
+        "created": "2026-01-01",
+        "last_updated": "2026-01-01",
+        "total_entities": 2,
+        "total_relationships": 0
+    }
 }

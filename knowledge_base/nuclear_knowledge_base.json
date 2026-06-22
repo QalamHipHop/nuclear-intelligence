@@ -1,214 +1,84 @@
 {
-  "nuclear_physics": {
-    "fission": {
-      "description": "Nuclear fission is a reaction in which the nucleus of an atom splits into two or more smaller nuclei.",
-      "key_concepts": [
-        "Chain reaction",
-        "Critical mass",
-        "Neutron multiplication factor",
-        "Prompt neutrons vs delayed neutrons"
-      ],
-      "applications": [
-        "Nuclear power generation",
-        "Nuclear weapons",
-        "Medical isotopes"
-      ],
-      "equations": [
-        "E = mc²",
-        "k_eff = (neutrons produced) / (neutrons absorbed or leaked)"
-      ]
-    },
-    "fusion": {
-      "description": "Nuclear fusion is a reaction in which two or more atomic nuclei combine to form one or more different atomic nuclei.",
-      "key_concepts": [
-        "Plasma confinement",
-        "Coulomb barrier",
-        "Reaction rate",
-        "Triple product (nTτ)"
-      ],
-      "applications": [
-        "Future power generation",
-        "Hydrogen bombs",
-        "Stellar processes"
-      ],
-      "challenges": [
-        "Achieving sustained fusion reaction",
-        "Plasma instability",
-        "Tritium breeding",
-        "Materials damage"
-      ]
-    },
-    "neutron_physics": {
-      "description": "Study of neutron behavior in nuclear systems.",
-      "topics": [
-        "Neutron transport",
-        "Cross-sections",
-        "Moderation",
-        "Absorption",
-        "Scattering"
-      ]
+    "version": "4.0.0",
+    "description": "Comprehensive nuclear energy knowledge base",
+    "domains": [
+        "Nuclear Physics",
+        "Reactor Engineering",
+        "Fusion Science",
+        "Nuclear Safety",
+        "Fuel Cycle",
+        "Waste Management",
+        "Nuclear Medicine",
+        "Materials Science",
+        "Economics"
+    ],
+    "topics": {
+        "fusion": {
+            "name": "Nuclear Fusion",
+            "description": "Controlled nuclear fusion for energy production",
+            "subtopics": [
+                "Tokamak",
+                "Stellarator",
+                "Inertial Confinement",
+                "Alternative Concepts"
+            ],
+            "key_equations": [
+                "Q = E_out / E_in",
+                " Lawson Criterion: n\u03c4E \u2265 3\u00d710^21 keV\u00b7s/m\u00b3"
+            ]
+        },
+        "fission": {
+            "name": "Nuclear Fission",
+            "description": "Controlled nuclear fission for energy production",
+            "subtopics": [
+                "PWR",
+                "BWR",
+                "CANDU",
+                "Fast Reactors",
+                "Molten Salt"
+            ],
+            "key_concepts": [
+                "Criticality",
+                "Neutron moderation",
+                "Fuel burnup"
+            ]
+        },
+        "safety": {
+            "name": "Nuclear Safety",
+            "description": "Safety systems and protocols for nuclear facilities",
+            "principles": [
+                "Defense in Depth",
+                "ALARA",
+                "Safety by Design"
+            ],
+            "accidents_studied": [
+                "Three Mile Island",
+                "Chernobyl",
+                "Fukushima"
+            ]
+        },
+        "waste": {
+            "name": "Nuclear Waste Management",
+            "description": "Handling, storage, and disposal of nuclear waste",
+            "categories": [
+                "High-Level Waste",
+                "Intermediate-Level Waste",
+                "Low-Level Waste"
+            ],
+            "disposal_methods": [
+                "Geological Repositories",
+                "Transmutation",
+                "Space Disposal"
+            ]
+        },
+        "medicine": {
+            "name": "Nuclear Medicine",
+            "description": "Medical applications of nuclear technology",
+            "applications": [
+                "Diagnostic Imaging",
+                "Radiation Therapy",
+                "PET Scans"
+            ]
+        }
     }
-  },
-  "reactor_engineering": {
-    "gen2_reactors": {
-      "description": "Second generation reactors (1970s-1990s)",
-      "types": [
-        "PWR (Pressurized Water Reactor)",
-        "BWR (Boiling Water Reactor)",
-        "CANDU"
-      ],
-      "characteristics": {
-        "thermal_power": "1000-1500 MWth",
-        "efficiency": "33-35%",
-        "lifetime": "40 years (extended to 60-80)"
-      }
-    },
-    "gen3_reactors": {
-      "description": "Third generation reactors (1990s-present)",
-      "types": [
-        "AP1000",
-        "EPR",
-        "ESBWR",
-        "ACR-1000"
-      ],
-      "improvements": [
-        "Enhanced safety systems",
-        "Passive safety features",
-        "Reduced construction time",
-        "Higher efficiency (38-40%)"
-      ]
-    },
-    "gen4_reactors": {
-      "description": "Fourth generation reactors (future)",
-      "types": [
-        "Sodium-cooled fast reactors (SFR)",
-        "Molten salt reactors (MSR)",
-        "Very high temperature reactors (VHTR)",
-        "Supercritical water reactors (SCWR)"
-      ],
-      "advantages": [
-        "Improved safety",
-        "Reduced waste",
-        "Better fuel utilization",
-        "Process heat applications"
-      ]
-    },
-    "smr_microreactors": {
-      "description": "Small Modular Reactors and Microreactors",
-      "characteristics": {
-        "power_output": "10-300 MWe",
-        "applications": [
-          "Remote locations",
-          "Industrial heat",
-          "Desalination",
-          "Hydrogen production",
-          "District heating"
-        ]
-      }
-    }
-  },
-  "safety_management": {
-    "defense_in_depth": {
-      "description": "Multi-layered safety approach",
-      "levels": [
-        "Prevention of abnormal operation",
-        "Control of abnormal operation",
-        "Mitigation of accident consequences",
-        "Containment of radioactive material"
-      ]
-    },
-    "waste_management": {
-      "description": "Nuclear waste handling and disposal",
-      "categories": [
-        "Low-level waste (LLW)",
-        "Intermediate-level waste (ILW)",
-        "High-level waste (HLW)"
-      ],
-      "solutions": [
-        "Deep geological repositories",
-        "Transmutation",
-        "Partitioning and transmutation (P&T)",
-        "Interim storage"
-      ]
-    },
-    "non_proliferation": {
-      "description": "Preventing misuse of nuclear materials",
-      "mechanisms": [
-        "IAEA safeguards",
-        "Export controls",
-        "Fuel bank concepts",
-        "Spent fuel repositories"
-      ]
-    }
-  },
-  "economics": {
-    "lcoe": {
-      "description": "Levelized Cost of Electricity",
-      "components": [
-        "Capital costs",
-        "Operations & maintenance",
-        "Fuel costs",
-        "Decommissioning costs",
-        "Financing costs"
-      ],
-      "nuclear_lcoe": "60-100 USD/MWh (depending on region and reactor type)"
-    },
-    "ppa_contracts": {
-      "description": "Power Purchase Agreements",
-      "types": [
-        "Fixed-price PPA",
-        "Escalating PPA",
-        "Indexed PPA"
-      ]
-    },
-    "tokenization": {
-      "description": "Converting energy assets into blockchain tokens",
-      "applications": [
-        "Uranium tokenization",
-        "Energy credit trading",
-        "Fractional ownership",
-        "Decentralized energy markets"
-      ]
-    }
-  },
-  "modern_applications": {
-    "ai_data_centers": {
-      "description": "Nuclear power for AI computing infrastructure",
-      "advantages": [
-        "High reliability for 24/7 operation",
-        "Low carbon footprint",
-        "Predictable costs",
-        "On-site generation"
-      ],
-      "examples": [
-        "Google-NuScale partnership",
-        "Microsoft-SMR exploration"
-      ]
-    },
-    "desalination": {
-      "description": "Using nuclear heat for water desalination",
-      "technologies": [
-        "Multi-effect distillation (MED)",
-        "Reverse osmosis (RO)",
-        "Thermal desalination"
-      ]
-    },
-    "hydrogen_production": {
-      "description": "Nuclear-powered hydrogen generation",
-      "methods": [
-        "Electrolysis with nuclear electricity",
-        "Thermochemical water splitting",
-        "High-temperature steam electrolysis"
-      ]
-    },
-    "load_following": {
-      "description": "Flexible nuclear power generation",
-      "benefits": [
-        "Grid stability",
-        "Renewable integration",
-        "Reduced curtailment",
-        "Improved economics"
-      ]
-    }
-  }
 }

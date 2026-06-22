@@ -2,39 +2,39 @@
     "chain": [
         {
             "index": 0,
-            "timestamp": "2026-06-10T21:05:16.232991",
+            "timestamp": "2026-06-22T21:06:57.914507",
             "transactions": [
                 {
-                    "tx_id": "bc10ce37a73dab4e9b5ae20e",
+                    "tx_id": "01f40b73c6580a1885b2862d",
                     "sender": "genesis",
                     "recipient": "system_treasury",
                     "amount": 0.0,
-                    "timestamp": "2026-06-10T21:05:16.232890",
+                    "timestamp": "2026-06-22T21:06:57.914463",
                     "metadata": {
-                        "note": "Nuclear Intelligence Genesis Block v3.0",
-                        "version": "3.0",
-                        "timestamp": "2026-06-10T21:05:16.232872",
-                        "difficulty": 4,
+                        "note": "Nuclear Intelligence Genesis Block v1.0.0",
+                        "version": "1.0.0",
+                        "timestamp": "2026-06-22T21:06:57.914457",
+                        "difficulty": 3,
                         "system": "Nuclear Intelligence Virtual Blockchain"
                     },
-                    "signature": "3fe9c813d882d97dae97c8b6b0ddbbd0713b3687d14852fd7abaa5bc52318befc2cb24ffc01e1d3d2c2d0f6d5ca91ad3",
+                    "signature": "1392be93545dd998a14d2b2eb8fded7243f7dfb6521797ab6f855e446a0601daec17cac39efd066c4ad9c5bbd4e9d4e9",
                     "nonce": 0,
                     "status": "confirmed"
                 }
             ],
-            "merkle_root": "b2db6e6b0f5dd7e02392fd68e5db07b9bb8442b506cb9bb2438ff08edfbdb09d",
+            "merkle_root": "5b81a2e575656b9068f3dfe438c98817704da5c52b6ae1c2f35026d0b7964479",
             "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-            "nonce": 1001,
-            "hash": "00372f816aa9e460d44c444cd252f186644bc4f12ec7679d098d9a9cd0bf2e26",
+            "nonce": 1014,
+            "hash": "0841bbc382b5ca36337f3f07af97612c907b06b4dce0fdbdcbd0d2efac91fb88",
             "difficulty": 1,
             "miner": "genesis",
             "reward": 1.0,
             "tx_count": 1,
-            "size_bytes": 890
+            "size_bytes": 894
         }
     ],
-    "difficulty": 4,
+    "difficulty": 3,
     "nes_supply": 0.0,
     "total_transactions": 0,
-    "saved_at": "2026-06-10T21:05:16.243506"
+    "saved_at": "2026-06-22T21:06:57.920345"
 }
