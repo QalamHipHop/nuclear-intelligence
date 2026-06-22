@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 
 # ─── Environment Detection ───────────────────────────────────────
-IS_HF_SPACE = bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE"))
+IS_HF_SPACE = bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE") or os.getenv("HF_TOKEN"))
 PORT = int(os.getenv("GRADIO_PORT", "7860"))
 
 # ─── Try Imports with Fallbacks ─────────────────────────────────

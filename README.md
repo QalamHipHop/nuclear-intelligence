@@ -18,7 +18,7 @@ tags:
   - fusion
 license: mit
 gpu: false
-app_file: hf_deploy/app.py
+app_file: app.py
 ---
 
 # ⚛️ Nuclear Intelligence v4.0

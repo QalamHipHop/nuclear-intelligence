@@ -70,6 +70,8 @@ jobs:
         if: always()
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_REPO: QalamHipHop/nuclear-intelligence
         run: |
           python scripts/sync_huggingface.py || true
 
@@ -81,7 +83,7 @@ jobs:
           file_pattern: |
             reports/*.json
             knowledge_base/*.json
-          skip_dirty: true
+          skip_dirty_check: true
 
   keepalive:
     runs-on: ubuntu-latest
