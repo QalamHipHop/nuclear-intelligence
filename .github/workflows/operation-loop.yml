@@ -94,6 +94,8 @@ jobs:
         run: |
           set -o pipefail
           python scripts/run_operation_cycle.py 2>&1 | tee logs/cycle_${{ github.run_id }}.log
+          # Note: a non-zero exit is OK; we still want to commit logs and sync
+          # the partial report. The next step uses `if: always()`.
 
       - name: 📤 Sync to HF Dataset
         if: always() && github.event.inputs.skip_hf_sync != 'true'
@@ -101,6 +103,17 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           python scripts/sync_huggingface.py || echo "sync step failed but continuing"
+
+      - name: 📦 Upload logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cycle-logs-${{ github.run_id }}
+          path: |
+            logs/
+            reports/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: 💾 Commit results
         if: always()

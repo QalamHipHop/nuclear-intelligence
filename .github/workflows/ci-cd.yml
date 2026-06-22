@@ -39,6 +39,19 @@ jobs:
         run: |
           python -c "from core.nuclear_intelligence import NuclearIntelligenceCore; print('✅ core imports OK')"
           python -c "from blockchain.virtual_ledger import VirtualLedger; print('✅ blockchain imports OK')"
+      - name: Smoke test: core_hf adapter
+        run: |
+          python -c "
+          from core_hf import HeadlessHFAdapter, run_cycle, sync_to_hf_dataset
+          adapter = HeadlessHFAdapter()
+          assert adapter is not None
+          assert isinstance(adapter.ready, bool)
+          assert isinstance(adapter.providers, list)
+          print('✅ core_hf adapter instantiates cleanly')
+          print('   ready:', adapter.ready)
+          print('   providers:', adapter.providers)
+          print('   nes_supply:', adapter.nes_supply)
+          "
       - name: Smoke test: HF core
         run: |
           python -c "
@@ -47,7 +60,23 @@ jobs:
           mod = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(mod)
           print('✅ HF core imports OK')
+          print('demo (UI block):', mod.demo)
           print('Providers:', mod.core.llm._available if mod.core else 'N/A')
+          "
+      - name: Smoke test: cycle runner dispatch
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'scripts')
+          import importlib.util
+          spec = importlib.util.spec_from_file_location('roc', 'scripts/run_operation_cycle.py')
+          roc = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(roc)
+          assert roc.is_hf_space() is False, 'should default to False in CI without SPACE_ID'
+          import os
+          os.environ['SPACE_ID'] = 'test/space'
+          assert roc.is_hf_space() is True, 'should detect SPACE_ID'
+          print('✅ run_operation_cycle dispatch logic OK')
           "
       - name: Smoke test: ledger
         run: |

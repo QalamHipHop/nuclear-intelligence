@@ -2,12 +2,16 @@
 """
 Nuclear Intelligence v5.0 - Research Cycle Runner
 ═══════════════════════════════════════════════════════════════════
-Runs a single research cycle. Works in two modes:
+Runs a single research cycle. Two execution paths:
 
-1. **Full mode** (default): uses `core/` modules with FAISS RAG, multi-LLM
-   fallback, advanced PoW mining, knowledge graph, and developer analysis.
-2. **HF Space mode** (when `SPACE_ID` env var is set): uses the lightweight
-   `hf_deploy/app.py` self-contained core.
+1. **GitHub Actions** (default): uses `core/` modules directly with FAISS RAG,
+   multi-LLM fallback, advanced PoW mining, knowledge graph, and developer
+   analysis. NEVER imports `hf_deploy/app.py` — that module is a Gradio UI
+   entrypoint only.
+
+2. **HF Space** (when `SPACE_ID` env var is set): uses the self-contained
+   `core_hf.py` adapter which mirrors the HF-deploy pipeline but in a
+   programmatic, import-safe form.
 
 Both modes save a JSON report to `reports/`, push to the HF dataset if
 `HF_TOKEN` is set, and commit results back to GitHub if `GITHUB_TOKEN` is set.
@@ -28,12 +32,20 @@ from loguru import logger
 # Configure logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logger.remove()
-logger.add(sys.stdout, level=LOG_LEVEL, colorize=True, format="<green>{time:HH:mm:ss}</green> | <level>{level: <7}</level> | <level>{message}</level>")
+logger.add(
+    sys.stdout,
+    level=LOG_LEVEL,
+    colorize=True,
+    format="<green>{time:HH:mm:ss}</green> | <level>{level: <7}</level> | <level>{message}</level>",
+)
+# Ensure logs/ exists
+Path("logs").mkdir(exist_ok=True)
 logger.add("logs/cycle_runs.log", rotation="10 MB", level=LOG_LEVEL, encoding="utf-8")
 
 
 def is_hf_space() -> bool:
-    return bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE") or os.getenv("HF_TOKEN") and not os.getenv("GH_TOKEN"))
+    """Detect if we're actually running on a HuggingFace Space runtime."""
+    return bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE") or os.getenv("RUNNING_ON_HF"))
 
 
 def run_full_cycle() -> int:
@@ -43,7 +55,7 @@ def run_full_cycle() -> int:
     from blockchain.virtual_ledger import VirtualLedger
 
     logger.info("════════════════════════════════════════════════════════════")
-    logger.info("⚛️  Nuclear Intelligence v5.0 — Full Pipeline")
+    logger.info("⚛️  Nuclear Intelligence v5.0 — Full Pipeline (core/)")
     logger.info("════════════════════════════════════════════════════════════")
 
     config = OperationLoopConfig(
@@ -91,38 +103,39 @@ def run_full_cycle() -> int:
 
 
 def run_hf_cycle() -> int:
-    """Run a cycle using the HF-deploy self-contained core."""
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "hf_app",
-        str(Path(__file__).parent.parent / "hf_deploy" / "app.py"),
-    )
-    hf_app = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(hf_app)
+    """Run a cycle inside the HF Space runtime via a programmatic adapter.
 
-    if not hf_app.core:
-        logger.error("HF core not initialized")
+    This path MUST NOT import `hf_deploy/app.py` because that module builds a
+    full Gradio UI on import which (a) fails in non-UI contexts, and (b) is
+    wasteful for a headless cycle run. We invoke `core_hf.HeadlessHFAdapter`
+    instead, which exposes `run_cycle()` and `sync_to_hf_dataset()`.
+    """
+    from core_hf import HeadlessHFAdapter  # lazy import
+
+    adapter = HeadlessHFAdapter()
+    if not adapter.ready:
+        logger.error("HF core not initialized (no API keys?); nothing to do.")
         return 1
 
     logger.info("════════════════════════════════════════════════════════════")
-    logger.info("⚛️  Nuclear Intelligence v5.0 — HF Space Mode")
+    logger.info("⚛️  Nuclear Intelligence v5.0 — HF Space Mode (headless)")
     logger.info("════════════════════════════════════════════════════════════")
-    logger.info(f"LLM providers: {hf_app.core.llm._available}")
-    logger.info(f"NES supply: {hf_app.core.ledger.nes_supply}")
+    logger.info(f"LLM providers: {adapter.providers}")
+    logger.info(f"NES supply:    {adapter.nes_supply}")
 
-    result = hf_app.core.run_cycle(dev_mode=True)
-
+    result = adapter.run_cycle(dev_mode=True)
     if "error" in result and "question" not in result:
         logger.error(f"Cycle failed: {result['error']}")
         return 1
 
     status = "✅ MINTED" if result.get("minted") else "❌ REJECTED"
-    logger.info(f"Cycle {result['cycle_id']} → {status} in {result.get('execution_time_seconds', 0)}s")
+    logger.info(
+        f"Cycle {result['cycle_id']} → {status} in {result.get('execution_time_seconds', 0)}s"
+    )
 
     if result.get("minted") and result.get("tx_hash"):
         logger.success(f"🪙 NES token minted: {result['tx_hash'][:24]}...")
-        # Auto-sync to HF dataset
-        synced = hf_app.sync_to_hf_dataset(result)
+        synced = adapter.sync_to_hf_dataset(result)
         logger.info(f"HF dataset sync: {'✅' if synced else '⚠️ skipped/failed'}")
 
     return 0
@@ -130,6 +143,7 @@ def run_hf_cycle() -> int:
 
 def main() -> int:
     start = time.time()
+    rc = 0
     try:
         if is_hf_space():
             rc = run_hf_cycle()
