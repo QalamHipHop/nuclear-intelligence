@@ -1,14 +1,35 @@
-name: Keep Alive Space
+name: 💓 Keep Alive — HF Space
 
 on:
+  # Every 20 minutes (HF Spaces sleep after 48h of inactivity on free tier)
   schedule:
-    - cron: '*/25 * * * *'
+    - cron: "*/20 * * * *"
   workflow_dispatch:
 
 jobs:
   ping:
+    name: 📡 Ping HF Space
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Ping HF Space
+      - name: Ping Space
+        id: ping
         run: |
-          curl -I https://huggingface.co/spaces/Qalam/Nuclear-Intelligence
+          SPACE_URL="https://huggingface.co/spaces/${{ vars.SPACE_ID || 'Qalam/Nuclear-Intelligence' }}"
+          echo "Pinging: $SPACE_URL"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$SPACE_URL" || echo "000")
+          echo "Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
+            echo "⚠️ Space not healthy (HTTP $HTTP_CODE). Retrying in 15s..."
+            sleep 15
+            HTTP_CODE2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$SPACE_URL" || echo "000")
+            echo "Retry status: $HTTP_CODE2"
+          fi
+
+      - name: Health check API
+        if: always()
+        run: |
+          # If you have a health endpoint, ping it too
+          HEALTH_URL="https://qalam-nuclear-intelligence.hf.space/health"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$HEALTH_URL" || echo "000")
+          echo "Health endpoint: $HTTP_CODE"

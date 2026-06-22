@@ -1,9 +1,14 @@
 ---
 title: Nuclear Intelligence
 emoji: ⚛️
-color: "#00d4ff"
+colorFrom: blue
+colorTo: indigo
 sdk: gradio
-python_version: "3.11"
+sdk_version: 4.44.0
+python_version: 3.11
+app_file: app.py
+pinned: false
+license: mit
 tags:
   - nuclear
   - energy
@@ -16,8 +21,6 @@ tags:
   - deepseek
   - groq
   - fusion
-license: mit
-gpu: false
 ---
 
 # Nuclear Intelligence v4.0 ⚛️
@@ -30,88 +33,123 @@ gpu: false
 
 ## 🎯 Features
 
-- **🤖 10 Free LLM Providers** - DeepSeek, Groq, Cerebras, Gemini, Fireworks, HuggingFace
-- **🔬 AI Research Engine** - Automated nuclear energy research with multi-dimension evaluation
-- **⛓️ Virtual Blockchain** - POW mining with adaptive difficulty, NES token minting
-- **🕸️ Knowledge Graph** - Entity relationships, advanced search, analytics
-- **📊 Real-time Monitoring** - Live stats, health checks, visualization dashboards
-- **🔬 Developer Mode** - Deep cross-domain analysis, research gap identification
+- **🤖 7 Free LLM Providers** with intelligent fallback — DeepSeek, Groq, Gemini, Together, Fireworks, AIMLAPI, HuggingFace
+- **🔬 AI Research Engine** — automated nuclear energy research with multi-dimensional evaluation
+- **⛓️ Virtual Blockchain** — POW mining with adaptive difficulty, NES token minting
+- **🕸️ Knowledge Graph** — entity relationships, advanced search, analytics
+- **🛡️ Safety Guardrails** — defensive filter for weapons / proliferation / RDD queries (v4.0)
+- **📊 Real-time Monitoring** — live stats, health checks, visualization dashboards
+- **🌐 Multilingual** — automatic Persian / English detection
+- **🔬 Developer Mode** — deep cross-domain analysis, research gap identification
 
 ## 🚀 Quick Start
 
-1. **Add API Keys** (optional - demo mode works without keys):
+1. **Add API Keys** in the Space's *Settings → Variables and secrets* (optional — demo mode works without keys):
    ```
    AIMLAPI_API_KEY=...
    DEEPSEEK_API_KEY=sk-...
    GROQ_API_KEY=gsk_...
    GEMINI_API_KEY=...
    HF_TOKEN=hf_...
+   TOGETHER_API_KEY=...
+   FIREWORKS_API_KEY=...
    ```
-
 2. **The app auto-detects available providers and falls back gracefully**
-
 3. **Run Research Cycles** or **Ask Questions** about nuclear energy
+4. Try the **🛡️ Safety & Health** tab for prompt-policy self-tests
 
 ## 📋 Requirements
 
 All dependencies are pre-installed. Main packages:
-- `gradio>=4.36.0` - UI Framework
-- `openai>=1.12.0` - LLM API calls
-- `loguru>=0.7.2` - Logging
-- `pandas>=2.2.0` - Data analysis
-- `plotly>=5.19.0` - Visualization
+- `gradio>=4.36.0` — UI framework
+- `openai>=1.12.0` — LLM API calls
+- `loguru>=0.7.2` — logging
+- `pandas>=2.2.0` — data analysis
+- `plotly>=5.19.0` — visualization
+- `requests` — web search
 
 ## 🏗️ Architecture
 
 ```
 Nuclear Intelligence v4.0
-├── LLM Engine         - 10-provider multi-model routing
-├── Research Core      - RAG + evaluation pipeline
-├── Knowledge Graph    - Entity management & search
-├── Blockchain         - POW mining + NES tokens
-└── Gradio UI          - Real-time dashboard
+├── LLM Engine          — 7-provider multi-model routing with fallback
+├── Research Core       — RAG + multi-layer evaluation pipeline
+├── Knowledge Graph     — entity management & semantic search
+├── Blockchain          — POW mining + NES tokens
+├── Safety Guard        — weapons / proliferation / RDD filter (v4.0)
+├── Enhanced Eval       — self-consistency + citation quality + readiness
+├── Enhanced RAG        — domain-weighted re-ranking + diversity
+├── i18n                — Persian / English detection
+└── Gradio UI           — 6-tab real-time dashboard
 ```
 
 ## 🪙 NES Token System
 
-- Research cycles evaluate answers on 4 dimensions:
-  - Scientific Accuracy (45% weight)
-  - Novelty Score (25% weight)
-  - Usefulness (20% weight)
-  - Completeness (10% weight)
-- Answers scoring 82%+ are minted as NES tokens
-- Tokens are recorded on the virtual blockchain
+Research cycles evaluate answers on five dimensions:
 
-## 📊 Quality Thresholds
+| Dimension | Weight |
+|---|---|
+| Scientific Accuracy | 45 % |
+| Novelty Score | 25 % |
+| Usefulness | 20 % |
+| Completeness | 10 % |
+| *(v4.0)* Self-Consistency + Citation Quality | tiebreaker |
+
+Answers scoring **≥ 82 %** overall are minted as NES tokens and recorded on the virtual blockchain.
+
+## 📊 Quality Thresholds (v4.0)
 
 | Metric | Threshold |
-|--------|-----------|
-| Scientific Accuracy | ≥93% |
-| Novelty Score | ≥70% |
-| Usefulness | ≥75% |
-| Overall Score | ≥82% |
+|---|---|
+| Scientific Accuracy | ≥ 93 % |
+| Novelty Score | ≥ 75 % |
+| Usefulness | ≥ 80 % |
+| Self-Consistency | ≥ 0.80 |
+| Citation Quality | ≥ 50 |
+| **Overall (Tokenization-Readiness)** | **≥ 85 %** |
 
 ## 🔧 Configuration
 
-Add to `.env` file:
+Add to `.env` file or Space variables:
 ```env
 DEVELOPER_MODE=true
-AUTO_START_LOOP=true
+AUTO_START_LOOP=false
 SCIENTIFIC_ACCURACY_THRESHOLD=93
-MIN_NOVELTY_THRESHOLD=70
-MIN_USEFULNESS_THRESHOLD=75
-MIN_OVERALL_SCORE=82
+MIN_NOVELTY_THRESHOLD=75
+MIN_USEFULNESS_THRESHOLD=80
+MIN_OVERALL_SCORE=85
+OPERATION_LOOP_INTERVAL_MINUTES=30
+```
+
+## 🛡️ Safety Policy (v4.0)
+
+The Space enforces a *defensive* policy on every user prompt:
+
+- Refuses weapons design, illicit enrichment, weapons-usable material handling
+- Refuses radiological dispersal device ("dirty bomb") instructions
+- Refuses cyber-proliferation guidance for nuclear facilities
+- Refuses illicit-trafficking assistance
+- **Redirects** refused prompts to the legitimate peaceful-use side of the topic
+
+Compliance: NPT, IAEA safeguards, NSG / Zangger Committee, PSI.
+
+## 🩺 Health Check
+
+Run anytime (also available in the Gradio UI):
+```bash
+python scripts/health_check.py
 ```
 
 ## 📜 License
 
-MIT License - QalamHipHop
+MIT License — © QalamHipHop
 
 ## 🔗 Links
 
 - [GitHub](https://github.com/QalamHipHop/nuclear-intelligence)
-- [HuggingFace Spaces](https://huggingface.co/spaces/Qalam/Nuclear-Intelligence)
+- [HuggingFace Space](https://huggingface.co/spaces/Qalam/Nuclear-Intelligence)
+- [CHANGELOG v4.0](https://github.com/QalamHipHop/nuclear-intelligence/blob/main/CHANGELOG_V4.md)
 
 ---
 
-**Built with ❤️ for nuclear energy research**
+**Built with ❤️ for the safe advancement of nuclear energy.**

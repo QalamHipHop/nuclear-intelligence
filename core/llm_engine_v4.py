@@ -183,10 +183,8 @@ class LLMEngine:
         """Check which providers have valid API keys"""
         logger.info("🔍 Checking LLM providers...")
         
-        # Ensure AIMLAPI key is always set
-        if not os.getenv("AIMLAPI_API_KEY"):
-            os.environ["AIMLAPI_API_KEY"] = "bd510ec538561ec582dc003b6070cf6d"
-        
+        # SECURITY: never hardcode API keys. AIMLAPI must come from env / secrets only.
+        # If missing, the provider is silently skipped (free-tier fallback still works).
         available = []
         for name in self.provider_chain:
             if name not in PROVIDERS:

@@ -1,32 +1,42 @@
-# Nuclear Intelligence v4.0 - Main Project Requirements
-# Used by GitHub Actions workflow (operation-loop)
-# The HF Space uses hf_deploy/requirements.txt (lighter)
+# Nuclear Intelligence v5.0 - HuggingFace Space Requirements
+# Optimized for HF Spaces (Python 3.11)
+# Keep minimal but complete — missing deps cause runtime NameErrors.
 
-# Core Framework
-gradio>=4.36.0
-pandas>=2.0.0
-numpy>=1.26.0
+# ─── Core Framework (Gradio 4.36 is the last reliable on Py 3.11) ──
+gradio>=4.36.0,<5.0.0
+pandas>=2.2.0,<3.0.0
+numpy>=1.26.0,<3.0.0
 
-# LLM & API
-openai>=1.12.0
+# ─── Visualization ──────────────────────────────────────────────
+plotly>=5.19.0
+
+# ─── LLM & API Providers ────────────────────────────────────────
+openai>=1.12.0,<2.0.0
 httpx>=0.27.0
 requests>=2.31.0
+
+# ─── Free Web Search ────────────────────────────────────────────
+duckduckgo-search>=0.9.8
+
+# ─── Utilities & Logging ────────────────────────────────────────
 python-dotenv>=1.0.0
-
-# Blockchain & Security
-cryptography>=42.0.0
-
-# Utilities & Monitoring
 loguru>=0.7.2
-plotly>=5.19.0
 psutil>=5.9.0
 
-# GitHub sync
+# ─── HuggingFace & GitHub Sync ──────────────────────────────────
+huggingface-hub>=0.22.0
 PyGithub>=2.3.0
 
-# HuggingFace - pin to <0.26 for HfFolder compatibility with gradio
-huggingface-hub>=0.22.0,<0.26
+# ─── Blockchain & Security ──────────────────────────────────────
+cryptography>=42.0.0
 
-# Web Server (Optional/API)
-fastapi>=0.110.0
-uvicorn>=0.27.0
+# ─── HTML Parsing (RAG web pages) ───────────────────────────────
+beautifulsoup4>=4.12.0
+lxml>=5.2.0
+
+# ─── Async HTTP ─────────────────────────────────────────────────
+aiohttp>=3.9.0
+websockets>=12.0
+
+# ─── Optional FAISS (gracefully skipped if missing) ─────────────
+# faiss-cpu>=1.7.4

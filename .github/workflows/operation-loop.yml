@@ -1,59 +1,80 @@
-name: ⚛️ Nuclear Intelligence Operation Loop
+name: ⚛️ Nuclear Intelligence — Research Cycle
 
 on:
-  # Run every 30 minutes for always-online autonomous operation
+  # Every 25 minutes for always-online autonomous operation
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: "*/25 * * * *"
+  # Manual trigger
   workflow_dispatch:
     inputs:
       force_provider:
-        description: 'Force provider (optional: huggingface, huggingface_free)'
+        description: "Force provider (optional, e.g. huggingface, groq)"
         required: false
-        default: ''
+        default: ""
+      skip_hf_sync:
+        description: "Skip HF dataset sync"
+        required: false
+        default: "false"
+      skip_gh_sync:
+        description: "Skip GitHub sync"
+        required: false
+        default: "false"
+  # Trigger on push to main for testing
   push:
     branches: [main]
+    paths:
+      - "scripts/**"
+      - "core/**"
+      - "blockchain/**"
+
+# Cancel in-progress runs of the same workflow
+concurrency:
+  group: operation-loop
+  cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: "3.11"
 
 jobs:
   cycle:
+    name: 🔬 Research Cycle
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
-      - name: Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements_enhanced.txt
 
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-nuclear-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-nuclear-
-
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -q -r requirements.txt
 
-      - name: Initialize knowledge base
-        run: python scripts/initialize_knowledge_base.py || true
+      - name: 📚 Initialize knowledge base
+        run: |
+          if [ -f scripts/initialize_knowledge_base.py ]; then
+            python scripts/initialize_knowledge_base.py || echo "init step skipped"
+          fi
+          mkdir -p reports logs
 
-      - name: Run Nuclear Intelligence Research Cycle
+      - name: 🔬 Run Research Cycle
         id: cycle
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AIMLAPI_API_KEY: ${{ secrets.AIMLAPI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -63,39 +84,55 @@ jobs:
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
           BLOCKCHAIN_SECRET: ${{ secrets.BLOCKCHAIN_SECRET }}
           DEVELOPER_MODE: "true"
+          OPERATION_LOOP_INTERVAL_MINUTES: "25"
+          MIN_ACCURACY: "70"
+          MIN_NOVELTY: "60"
+          MIN_USEFULNESS: "60"
+          MIN_OVERALL: "65"
+          POW_DIFFICULTY: "3"
+          LOG_LEVEL: "INFO"
         run: |
-          python scripts/run_operation_cycle.py
+          set -o pipefail
+          python scripts/run_operation_cycle.py 2>&1 | tee logs/cycle_${{ github.run_id }}.log
 
-      - name: Sync to HuggingFace Dataset
-        if: always()
+      - name: 📤 Sync to HF Dataset
+        if: always() && github.event.inputs.skip_hf_sync != 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          GH_REPO: QalamHipHop/nuclear-intelligence
         run: |
-          python scripts/sync_huggingface.py || true
+          python scripts/sync_huggingface.py || echo "sync step failed but continuing"
 
-      - name: Commit reports
+      - name: 💾 Commit results
         if: always()
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "🤖 Auto: NES research cycle - ${{ github.run_id }}"
-          file_pattern: |
-            reports/*.json
-            knowledge_base/*.json
-          skip_dirty_check: true
-
-  keepalive:
-    runs-on: ubuntu-latest
-    needs: cycle
-    if: always()
-    steps:
-      - name: Ping HF Space
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://huggingface.co/spaces/Qalam/Nuclear-Intelligence)
-          echo "HF Space Status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "⚠️ HF Space not responding, retrying in 10s..."
-            sleep 10
-            curl -s -o /dev/null -w "%{http_code}" https://huggingface.co/spaces/Qalam/Nuclear-Intelligence
+          git config user.name "Nuclear Intelligence Bot"
+          git config user.email "noreply@nuclear-intelligence.ai"
+          git add -A reports/ knowledge_base/ logs/ 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🤖 Auto-cycle: ${{ github.run_id }} at $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || echo "nothing to commit"
+            git push || echo "push failed (may be due to concurrent runs)"
+          fi
+
+      - name: 📊 Summarize
+        if: always()
+        run: |
+          echo "═══════════════════════════════"
+          echo "Nuclear Intelligence Cycle Summary"
+          echo "═══════════════════════════════"
+          echo "Run ID:    ${{ github.run_id }}"
+          echo "Date:      $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "Status:    ${{ job.status }}"
+          if [ -d reports ]; then
+            echo "Reports:   $(ls reports/cycle_*.json 2>/dev/null | wc -l) files"
+            LATEST=$(ls -t reports/cycle_*.json 2>/dev/null | head -1)
+            if [ -n "$LATEST" ]; then
+              echo ""
+              echo "Latest cycle: $LATEST"
+              python -c "import json; d=json.load(open('$LATEST')); print('Minted:', d.get('minted')); print('Overall:', d.get('overall')); print('Question:', d.get('question', {}).get('question', 'N/A')[:80])" 2>/dev/null || true
+            fi
+          fi
+          if [ -f knowledge_base/virtual_ledger.json ]; then
+            python -c "import json; d=json.load(open('knowledge_base/virtual_ledger.json')); print('NES supply:', d.get('nes_supply', 0)); print('Chain length:', len(d.get('chain', [])))" 2>/dev/null || true
           fi

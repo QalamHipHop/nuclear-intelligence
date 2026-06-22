@@ -418,7 +418,7 @@ class VirtualLedger:
 
             logger.info(f"⛏️ Block #{block.index} mined!")
             logger.info(f"   Hash: {block.hash[:16]}... | Nonce: {block.nonce} | Time: {mining_time:.2f}s")
-            logger.info(f"   Difficulty: {block.difficulty} | TXs: {block.tx_count} | Size: {block.size_bytes}B")
+            logger.info(f"   Difficulty: {block.difficulty} | TXs: {len(block.transactions)} | Size: {block.size_bytes}B")
 
             return block
 
