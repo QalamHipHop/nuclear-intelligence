@@ -1239,6 +1239,26 @@ def get_category_chart():
 
 # ─── Action functions ─────────────────────────────────────────────
 
+def discover_question():
+    """Generate one research question without committing to a full cycle.
+    Used by the 🔍 Discover Question button."""
+    if not core:
+        return "❌ System initializing..."
+    try:
+        q = core.generate_question()
+        return (
+            f"## 🔍 Discovered Question\n\n"
+            f"**Question:** {q.get('question','')}\n\n"
+            f"- **Category:** `{q.get('category','N/A')}`\n"
+            f"- **Difficulty:** `{q.get('difficulty','N/A')}/10`\n"
+            f"- **Keywords:** `{' · '.join(q.get('keywords', []))}`\n"
+            f"- **Source:** `{q.get('source','?')}`\n\n"
+            f"_Hit 🚀 Run Research Cycle to research, evaluate, and possibly mint an NES token._"
+        )
+    except Exception as e:
+        return f"❌ Error: {e}"
+
+
 def run_cycle(dev_mode=True, sync_hf=True):
     if not core:
         return "❌ System initializing..."
@@ -1441,7 +1461,8 @@ if gradio_available:
                     with gr.Tab("🚀 Research Center"):
                         with gr.Row():
                             run_btn = gr.Button("🚀 Run Research Cycle", variant="primary")
-                            dev_chk = gr.Checkbox(label="Developer Mode", value=True)
+                            discover_btn = gr.Button("🔍 Discover Question", variant="secondary")
+                            dev_chk = gr.Checkbox(label="Developer Mode", value=False)
                             sync_chk = gr.Checkbox(label="Sync to HF Dataset", value=True)
                         cycle_out = gr.Markdown("### Click button to start research...")
 
@@ -1478,25 +1499,103 @@ if gradio_available:
         refresh_stats.click(get_system_stats, outputs=stats_box)
         refresh_llm.click(get_llm_status, outputs=llm_status)
         run_btn.click(run_cycle, inputs=[dev_chk, sync_chk], outputs=cycle_out)
+        discover_btn.click(discover_question, outputs=cycle_out)
         q_btn.click(ask_q, inputs=[q_input, dev_chk], outputs=q_out)
         verify_btn.click(verify_chain, outputs=verify_out)
         search_btn.click(search_kg, inputs=[search_input, limit_input], outputs=search_out)
         export_btn.click(export_state, outputs=export_out)
 
-        # Auto-refresh stats every 30s
-        timer = gr.Timer(30)
-        timer.tick(get_system_stats, outputs=stats_box)
-        timer.tick(get_chain_df, outputs=chain_table)
-        timer.tick(get_entities_df, outputs=entities_table)
-        timer.tick(get_history_df, outputs=history_table)
+        # Auto-refresh stats every 30s (gr.Timer was added in 4.40+, guard it)
+        try:
+            timer = gr.Timer(30)
+            timer.tick(get_system_stats, outputs=stats_box)
+            timer.tick(get_chain_df, outputs=chain_table)
+            timer.tick(get_entities_df, outputs=entities_table)
+            timer.tick(get_history_df, outputs=history_table)
+        except (AttributeError, TypeError):
+            # Gradio < 4.40: no Timer; auto-refresh via load-event poll instead.
+            logger.warning("gr.Timer unavailable (Gradio < 4.40) — auto-refresh disabled, use 🔄 buttons.")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# ALWAYS-ON: background autonomous loop (thread, headless)
+# ═══════════════════════════════════════════════════════════════════
+
+_autonomous_thread_started = False
+
+
+def _autonomous_loop():
+    """Background autonomous research loop. Runs every INTERVAL minutes."""
+    interval_seconds = int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", "25")) * 60
+    logger.info(f"🤖 Autonomous loop started (interval={interval_seconds}s)")
+    # Initial warm-up delay so Space finishes starting first
+    time.sleep(30)
+    while True:
+        try:
+            logger.info("🤖 Auto-cycle: starting research cycle")
+            res = core.run_cycle(dev_mode=False) if core else {"minted": False, "error": "no core"}
+            if res.get("minted"):
+                logger.info(f"✅ Auto-cycle: MINTED tx={res.get('tx_hash')} overall={res.get('overall')}")
+                # Sync to HF dataset & push to GitHub
+                try:
+                    sync_to_hf_dataset(res)
+                except Exception as e:
+                    logger.warning(f"HF dataset sync failed: {e}")
+            else:
+                logger.info(f"⏭️ Auto-cycle: rejected (overall={res.get('overall', 0)}) — trying again next interval")
+        except Exception as e:
+            logger.error(f"Auto-cycle error: {e}")
+        time.sleep(interval_seconds)
 
 
 if __name__ == "__main__":
     if demo is not None:
+        # Always-on autonomous loop in background
+        if os.getenv("AUTO_START_LOOP", "true").lower() == "true" and not _autonomous_thread_started:
+            try:
+                t = threading.Thread(target=_autonomous_loop, daemon=True, name="ni-autonomous")
+                t.start()
+                _autonomous_thread_started = True
+                logger.info("✅ Background autonomous loop launched")
+            except Exception as e:
+                logger.warning(f"Could not start autonomous loop: {e}")
+
         try:
             demo.launch(server_name="0.0.0.0", server_port=PORT, css=CSS)
         except TypeError:
             # Gradio 6.0+ deprecated css in launch() too; pass only valid kwargs
             demo.launch(server_name="0.0.0.0", server_port=PORT)
     else:
-        print("⚠️ Gradio not available; cannot launch UI. Run via 'huggingface_hub' sync or programmatic import.")
+        # Gradio unavailable — keep the Space alive with a tiny health HTTP server
+        print("⚠️ Gradio not available; cannot launch UI. Starting minimal health server.")
+        try:
+            from http.server import HTTPServer, BaseHTTPRequestHandler
+            import json as _json
+
+            class _Health(BaseHTTPRequestHandler):
+                def log_message(self, *a, **k):
+                    pass
+
+                def do_GET(self):
+                    if self.path == "/" or self.path == "/health":
+                        body = _json.dumps({
+                            "status": "ok",
+                            "name": "Nuclear Intelligence",
+                            "version": "5.0",
+                            "gradio_available": False,
+                            "core_initialized": core is not None,
+                        }).encode()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.send_header("Content-Length", str(len(body)))
+                        self.end_headers()
+                        self.wfile.write(body)
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+
+            srv = HTTPServer(("0.0.0.0", PORT), _Health)
+            logger.info(f"Health server on :{PORT}")
+            srv.serve_forever()
+        except Exception as e:
+            print(f"Health server failed: {e}")
