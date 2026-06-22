@@ -31,10 +31,12 @@ PORT = int(os.getenv("GRADIO_PORT", "7860"))
 
 # ─── Try Imports with Fallbacks ─────────────────────────────────
 gradio_available = False
+logger = None  # explicit init to satisfy NameError-on-attribute paths
 try:
     import gradio as gr
     import pandas as pd
-    from loguru import logger
+    from loguru import logger as _loguru_logger
+    logger = _loguru_logger
     import plotly.express as px
     gradio_available = True
 except ImportError as e:
@@ -47,6 +49,16 @@ try:
     load_dotenv()
 except Exception:
     pass
+
+# ── Logger fallback (must exist even if loguru import failed) ────
+if logger is None:
+    import logging as _logging
+    logger = _logging.getLogger("hf_deploy")
+    if not logger.handlers:
+        _h = _logging.StreamHandler()
+        _h.setFormatter(_logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+        logger.addHandler(_h)
+        logger.setLevel(_logging.INFO)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1227,6 +1239,26 @@ def get_category_chart():
 
 # ─── Action functions ─────────────────────────────────────────────
 
+def discover_question():
+    """Generate one research question without committing to a full cycle.
+    Used by the 🔍 Discover Question button."""
+    if not core:
+        return "❌ System initializing..."
+    try:
+        q = core.generate_question()
+        return (
+            f"## 🔍 Discovered Question\n\n"
+            f"**Question:** {q.get('question','')}\n\n"
+            f"- **Category:** `{q.get('category','N/A')}`\n"
+            f"- **Difficulty:** `{q.get('difficulty','N/A')}/10`\n"
+            f"- **Keywords:** `{' · '.join(q.get('keywords', []))}`\n"
+            f"- **Source:** `{q.get('source','?')}`\n\n"
+            f"_Hit 🚀 Run Research Cycle to research, evaluate, and possibly mint an NES token._"
+        )
+    except Exception as e:
+        return f"❌ Error: {e}"
+
+
 def run_cycle(dev_mode=True, sync_hf=True):
     if not core:
         return "❌ System initializing..."
@@ -1404,89 +1436,166 @@ CSS = """
 .rejected { color: #ef4444; }
 """
 
-if not gradio_available:
-    sys.stderr.write(
-        "FATAL: gradio/pandas/loguru/plotly are not importable.\n"
-        "Check requirements.txt was installed correctly.\n"
-    )
-    raise SystemExit(1)
+demo = None
+if gradio_available:
+    with gr.Blocks(title="Nuclear Intelligence v5.0") as demo:
+        gr.Markdown("# ⚛️ Nuclear Intelligence v5.0", elem_id="title")
+        gr.Markdown(
+            "**Autonomous nuclear energy research → multi-layer evaluation → SHA-3 PoW mining → NES token**\n\n"
+            "All research is produced by real LLMs. Evaluation is independent. Mining is real Proof-of-Work."
+        )
 
-with gr.Blocks(title="Nuclear Intelligence v5.0") as demo:
-    gr.Markdown("# ⚛️ Nuclear Intelligence v5.0", elem_id="title")
-    gr.Markdown(
-        "**Autonomous nuclear energy research → multi-layer evaluation → SHA-3 PoW mining → NES token**\n\n"
-        "All research is produced by real LLMs. Evaluation is independent. Mining is real Proof-of-Work."
-    )
+        with gr.Row():
+            with gr.Column(scale=1):
+                stats_box = gr.Markdown(get_system_stats)
+                refresh_stats = gr.Button("🔄 Refresh Stats", variant="secondary")
+                export_btn = gr.Button("💾 Export State")
+                export_out = gr.Markdown()
 
-    with gr.Row():
-        with gr.Column(scale=1):
-            stats_box = gr.Markdown(get_system_stats)
-            refresh_stats = gr.Button("🔄 Refresh Stats", variant="secondary")
-            export_btn = gr.Button("💾 Export State")
-            export_out = gr.Markdown()
+                with gr.Accordion("🔌 LLM Engine", open=False):
+                    llm_status = gr.Markdown(get_llm_status)
+                    refresh_llm = gr.Button("📡 Check Providers")
 
-            with gr.Accordion("🔌 LLM Engine", open=False):
-                llm_status = gr.Markdown(get_llm_status)
-                refresh_llm = gr.Button("📡 Check Providers")
+            with gr.Column(scale=3):
+                with gr.Tabs():
+                    with gr.Tab("🚀 Research Center"):
+                        with gr.Row():
+                            run_btn = gr.Button("🚀 Run Research Cycle", variant="primary")
+                            discover_btn = gr.Button("🔍 Discover Question", variant="secondary")
+                            dev_chk = gr.Checkbox(label="Developer Mode", value=False)
+                            sync_chk = gr.Checkbox(label="Sync to HF Dataset", value=True)
+                        cycle_out = gr.Markdown("### Click button to start research...")
 
-        with gr.Column(scale=3):
-            with gr.Tabs():
-                with gr.Tab("🚀 Research Center"):
-                    with gr.Row():
-                        run_btn = gr.Button("🚀 Run Research Cycle", variant="primary")
-                        dev_chk = gr.Checkbox(label="Developer Mode", value=True)
-                        sync_chk = gr.Checkbox(label="Sync to HF Dataset", value=True)
-                    cycle_out = gr.Markdown("### Click button to start research...")
+                        with gr.Accordion("🔍 Manual Q&A", open=False):
+                            q_input = gr.Textbox(
+                                label="Ask a nuclear question",
+                                placeholder="e.g. How do molten salt reactors handle tritium breeding?",
+                            )
+                            q_btn = gr.Button("Search & Answer")
+                            q_out = gr.Markdown()
 
-                    with gr.Accordion("🔍 Manual Q&A", open=False):
-                        q_input = gr.Textbox(
-                            label="Ask a nuclear question",
-                            placeholder="e.g. How do molten salt reactors handle tritium breeding?",
-                        )
-                        q_btn = gr.Button("Search & Answer")
-                        q_out = gr.Markdown()
+                    with gr.Tab("⛓️ Blockchain"):
+                        verify_btn = gr.Button("⛓️ Verify Ledger Integrity")
+                        verify_out = gr.Markdown()
+                        gr.Markdown("### Latest Transactions")
+                        chain_table = gr.DataFrame(get_chain_df)
 
-                with gr.Tab("⛓️ Blockchain"):
-                    verify_btn = gr.Button("⛓️ Verify Ledger Integrity")
-                    verify_out = gr.Markdown()
-                    gr.Markdown("### Latest Transactions")
-                    chain_table = gr.DataFrame(get_chain_df)
+                    with gr.Tab("🕸️ Knowledge Graph"):
+                        search_input = gr.Textbox(label="Search", placeholder="e.g. fusion, reactor, safety")
+                        limit_input = gr.Slider(label="Limit", minimum=1, maximum=50, value=10, step=1)
+                        search_btn = gr.Button("Search")
+                        search_out = gr.Markdown()
+                        gr.Markdown("### Latest Entities")
+                        entities_table = gr.DataFrame(get_entities_df)
 
-                with gr.Tab("🕸️ Knowledge Graph"):
-                    search_input = gr.Textbox(label="Search", placeholder="e.g. fusion, reactor, safety")
-                    limit_input = gr.Slider(label="Limit", minimum=1, maximum=50, value=10, step=1)
-                    search_btn = gr.Button("Search")
-                    search_out = gr.Markdown()
-                    gr.Markdown("### Latest Entities")
-                    entities_table = gr.DataFrame(get_entities_df)
+                    with gr.Tab("📈 Analytics"):
+                        with gr.Row():
+                            chart1 = gr.Plot(get_category_chart)
+                            chart2 = gr.Plot(get_score_chart)
+                        gr.Markdown("### Recent Cycles")
+                        history_table = gr.DataFrame(get_history_df)
 
-                with gr.Tab("📈 Analytics"):
-                    with gr.Row():
-                        chart1 = gr.Plot(get_category_chart)
-                        chart2 = gr.Plot(get_score_chart)
-                    gr.Markdown("### Recent Cycles")
-                    history_table = gr.DataFrame(get_history_df)
+        # Event handlers
+        refresh_stats.click(get_system_stats, outputs=stats_box)
+        refresh_llm.click(get_llm_status, outputs=llm_status)
+        run_btn.click(run_cycle, inputs=[dev_chk, sync_chk], outputs=cycle_out)
+        discover_btn.click(discover_question, outputs=cycle_out)
+        q_btn.click(ask_q, inputs=[q_input, dev_chk], outputs=q_out)
+        verify_btn.click(verify_chain, outputs=verify_out)
+        search_btn.click(search_kg, inputs=[search_input, limit_input], outputs=search_out)
+        export_btn.click(export_state, outputs=export_out)
 
-    # Event handlers
-    refresh_stats.click(get_system_stats, outputs=stats_box)
-    refresh_llm.click(get_llm_status, outputs=llm_status)
-    run_btn.click(run_cycle, inputs=[dev_chk, sync_chk], outputs=cycle_out)
-    q_btn.click(ask_q, inputs=[q_input, dev_chk], outputs=q_out)
-    verify_btn.click(verify_chain, outputs=verify_out)
-    search_btn.click(search_kg, inputs=[search_input, limit_input], outputs=search_out)
-    export_btn.click(export_state, outputs=export_out)
+        # Auto-refresh stats every 30s (gr.Timer was added in 4.40+, guard it)
+        try:
+            timer = gr.Timer(30)
+            timer.tick(get_system_stats, outputs=stats_box)
+            timer.tick(get_chain_df, outputs=chain_table)
+            timer.tick(get_entities_df, outputs=entities_table)
+            timer.tick(get_history_df, outputs=history_table)
+        except (AttributeError, TypeError):
+            # Gradio < 4.40: no Timer; auto-refresh via load-event poll instead.
+            logger.warning("gr.Timer unavailable (Gradio < 4.40) — auto-refresh disabled, use 🔄 buttons.")
 
-    # Auto-refresh stats every 30s
-    timer = gr.Timer(30)
-    timer.tick(get_system_stats, outputs=stats_box)
-    timer.tick(get_chain_df, outputs=chain_table)
-    timer.tick(get_entities_df, outputs=entities_table)
-    timer.tick(get_history_df, outputs=history_table)
+
+# ═══════════════════════════════════════════════════════════════════
+# ALWAYS-ON: background autonomous loop (thread, headless)
+# ═══════════════════════════════════════════════════════════════════
+
+_autonomous_thread_started = False
+
+
+def _autonomous_loop():
+    """Background autonomous research loop. Runs every INTERVAL minutes."""
+    interval_seconds = int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", "25")) * 60
+    logger.info(f"🤖 Autonomous loop started (interval={interval_seconds}s)")
+    # Initial warm-up delay so Space finishes starting first
+    time.sleep(30)
+    while True:
+        try:
+            logger.info("🤖 Auto-cycle: starting research cycle")
+            res = core.run_cycle(dev_mode=False) if core else {"minted": False, "error": "no core"}
+            if res.get("minted"):
+                logger.info(f"✅ Auto-cycle: MINTED tx={res.get('tx_hash')} overall={res.get('overall')}")
+                # Sync to HF dataset & push to GitHub
+                try:
+                    sync_to_hf_dataset(res)
+                except Exception as e:
+                    logger.warning(f"HF dataset sync failed: {e}")
+            else:
+                logger.info(f"⏭️ Auto-cycle: rejected (overall={res.get('overall', 0)}) — trying again next interval")
+        except Exception as e:
+            logger.error(f"Auto-cycle error: {e}")
+        time.sleep(interval_seconds)
 
 
 if __name__ == "__main__":
-    try:
-        demo.launch(server_name="0.0.0.0", server_port=PORT, css=CSS)
-    except TypeError:
-        # Gradio 6.0+ deprecated css in launch() too; pass only valid kwargs
-        demo.launch(server_name="0.0.0.0", server_port=PORT)
+    if demo is not None:
+        # Always-on autonomous loop in background
+        if os.getenv("AUTO_START_LOOP", "true").lower() == "true" and not _autonomous_thread_started:
+            try:
+                t = threading.Thread(target=_autonomous_loop, daemon=True, name="ni-autonomous")
+                t.start()
+                _autonomous_thread_started = True
+                logger.info("✅ Background autonomous loop launched")
+            except Exception as e:
+                logger.warning(f"Could not start autonomous loop: {e}")
+
+        try:
+            demo.launch(server_name="0.0.0.0", server_port=PORT, css=CSS)
+        except TypeError:
+            # Gradio 6.0+ deprecated css in launch() too; pass only valid kwargs
+            demo.launch(server_name="0.0.0.0", server_port=PORT)
+    else:
+        # Gradio unavailable — keep the Space alive with a tiny health HTTP server
+        print("⚠️ Gradio not available; cannot launch UI. Starting minimal health server.")
+        try:
+            from http.server import HTTPServer, BaseHTTPRequestHandler
+            import json as _json
+
+            class _Health(BaseHTTPRequestHandler):
+                def log_message(self, *a, **k):
+                    pass
+
+                def do_GET(self):
+                    if self.path == "/" or self.path == "/health":
+                        body = _json.dumps({
+                            "status": "ok",
+                            "name": "Nuclear Intelligence",
+                            "version": "5.0",
+                            "gradio_available": False,
+                            "core_initialized": core is not None,
+                        }).encode()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.send_header("Content-Length", str(len(body)))
+                        self.end_headers()
+                        self.wfile.write(body)
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+
+            srv = HTTPServer(("0.0.0.0", PORT), _Health)
+            logger.info(f"Health server on :{PORT}")
+            srv.serve_forever()
+        except Exception as e:
+            print(f"Health server failed: {e}")
