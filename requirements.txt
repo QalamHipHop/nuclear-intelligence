@@ -1,9 +1,14 @@
 # Nuclear Intelligence v5.0 - HuggingFace Space Requirements
 # Optimized for HF Spaces (Python 3.11)
-# Keep minimal but complete — missing deps cause runtime NameErrors.
+# Tested with Gradio 4.36.0 (last reliable on Py 3.11) — pinned below.
+#
+# ⚠️  CRITICAL PIN: huggingface-hub MUST stay < 0.26 because Gradio 4.36
+#     imports HfFolder from huggingface_hub, which was removed in 0.26.
+#     See: https://github.com/gradio-app/gradio/pull/8204
+huggingface-hub>=0.22,<0.26
 
-# ─── Core Framework (Gradio 4.36 is the last reliable on Py 3.11) ──
-gradio>=4.36.0,<5.0.0
+# ─── Core Framework ──────────────────────────────────────────────
+gradio[oauth]==4.36.0
 pandas>=2.2.0,<3.0.0
 numpy>=1.26.0,<3.0.0
 
@@ -15,8 +20,8 @@ openai>=1.12.0,<2.0.0
 httpx>=0.27.0
 requests>=2.31.0
 
-# ─── Free Web Search ────────────────────────────────────────────
-duckduckgo-search>=0.9.8
+# ─── Free Web Search (for RAG) ───────────────────────────────────
+duckduckgo-search>=6.0.0
 
 # ─── Utilities & Logging ────────────────────────────────────────
 python-dotenv>=1.0.0
@@ -24,7 +29,6 @@ loguru>=0.7.2
 psutil>=5.9.0
 
 # ─── HuggingFace & GitHub Sync ──────────────────────────────────
-huggingface-hub>=0.22.0
 PyGithub>=2.3.0
 
 # ─── Blockchain & Security ──────────────────────────────────────
