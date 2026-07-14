@@ -16,14 +16,33 @@ class WebSearchEngine:
         return []
 
     def _search_duckduckgo(self, query: str, num_results: int) -> List[Dict]:
+        # Try the modern `ddgs` package first (it replaced `duckduckgo_search`),
+        # then fall back to the legacy `duckduckgo_search` import path.
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS  # type: ignore
+            ddgs_mod = "ddgs"
+        except ImportError:
+            try:
+                from duckduckgo_search import DDGS  # type: ignore
+                ddgs_mod = "duckduckgo_search"
+            except ImportError:
+                return self._search_duckduckgo_fallback(query, num_results)
+        try:
             with DDGS() as ddgs:
-                results = [{"title": r.get("title",""), "url": r.get("url",""), "snippet": r.get("body",""), "source": "duckduckgo"} for r in ddgs.text(query, max_results=num_results)]
-                if results: logger.info(f"DuckDuckGo: {len(results)} results")
+                results = [
+                    {
+                        "title": r.get("title", ""),
+                        "url": r.get("url", "") or r.get("href", ""),
+                        "snippet": r.get("body", "") or r.get("snippet", ""),
+                        "source": "duckduckgo",
+                    }
+                    for r in ddgs.text(query, max_results=num_results)
+                ]
+                if results:
+                    logger.info(f"DuckDuckGo ({ddgs_mod}): {len(results)} results")
                 return results
-        except ImportError: pass
-        except Exception as e: logger.debug(f"DuckDuckGo failed: {e}")
+        except Exception as e:
+            logger.debug(f"DuckDuckGo failed: {e}")
         return self._search_duckduckgo_fallback(query, num_results)
 
     def _search_duckduckgo_fallback(self, query: str, num_results: int) -> List[Dict]:
