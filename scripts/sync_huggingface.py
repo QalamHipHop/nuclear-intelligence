@@ -162,7 +162,7 @@ def sync_github(limit: int = 10) -> int:
         return 0
 
     token = os.getenv("GITHUB_TOKEN", "").strip()
-    if not token or not token.startswith(("ghp_", "github_pat_")):
+    if not token:
         logger.warning("GITHUB_TOKEN not set — skipping GH sync")
         return 0
 

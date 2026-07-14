@@ -57,6 +57,8 @@ class KnowledgeGraph:
                         data = json.loads(content)
                         if isinstance(data, dict) and "entities" in data:
                             self.graph = data
+                            if "categories" not in self.graph:
+                                self.graph["categories"] = {}
                             self._rebuild_indices()
                             logger.info(f"📚 Loaded KG: {len(self.graph['entities'])} entities")
                         else:

@@ -499,6 +499,7 @@ Provide deep technical analysis.""",
                 "accuracy": evaluation.scientific_accuracy, "novelty": evaluation.novelty_score,
                 "usefulness": evaluation.usefulness_score, "completeness": evaluation.completeness,
                 "citations": answer.citations, "sources": answer.sources, "provider": answer.provider,
+                "keywords": getattr(question, "keywords", []),
             }
         )
 
