@@ -11,9 +11,9 @@
                 "scientific_accuracy": 92.0,
                 "novelty_score": 78.0,
                 "usefulness_score": 85.0,
-                "created": "2026-06-22T21:56:31.817210"
+                "created": "2026-07-16T22:41:50.167105"
             },
-            "created": "2026-06-22T21:56:31.817213"
+            "created": "2026-07-16T22:41:50.167110"
         },
         "1d94037a7442ae1b": {
             "id": "1d94037a7442ae1b",
@@ -25,16 +25,77 @@
                 "scientific_accuracy": 94.0,
                 "novelty_score": 82.0,
                 "usefulness_score": 88.0,
-                "created": "2026-06-22T21:56:31.817217"
+                "created": "2026-07-16T22:41:50.167117"
             },
-            "created": "2026-06-22T21:56:31.817218"
+            "created": "2026-07-16T22:41:50.167119"
+        },
+        "7c5144cde181f113": {
+            "id": "7c5144cde181f113",
+            "question": "What is the current state of tritium breeding ratio optimization in D-T fusion reactors?",
+            "answer_summary": "Advanced research on: What is the current state of tritium breeding ratio optimization in D-T fusion reactors?\n\nKeywords: tritium, D-T fusion, breeding ratio, TBR, fusion reactor\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+            "answer_full": "Advanced research on: What is the current state of tritium breeding ratio optimization in D-T fusion reactors?\n\nKeywords: tritium, D-T fusion, breeding ratio, TBR, fusion reactor\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+            "metadata": {
+                "category": "Fusion",
+                "difficulty": 9,
+                "accuracy": 95.0,
+                "novelty": 85.0,
+                "usefulness": 90.0,
+                "completeness": 90.0,
+                "citations": [
+                    "Nuclear Intelligence Knowledge Base",
+                    "Fallback Generation"
+                ],
+                "sources": [
+                    {
+                        "title": "Fallback",
+                        "url": "",
+                        "type": "internal"
+                    }
+                ],
+                "provider": "fallback",
+                "keywords": [
+                    "tritium",
+                    "D-T fusion",
+                    "breeding ratio",
+                    "TBR",
+                    "fusion reactor"
+                ]
+            },
+            "created_at": "2026-07-16T22:41:56.287673",
+            "access_count": 0,
+            "verified": true,
+            "version": "3.0",
+            "relationships": []
         }
     },
-    "relationships": [],
+    "relationships": [
+        {
+            "id": "04afed1ebc11",
+            "from": "7c5144cde181f113",
+            "to": "Fusion",
+            "type": "belongs_to_category",
+            "created_at": "2026-07-16T22:41:56.287681"
+        },
+        {
+            "id": "bd862536da3e",
+            "from": "7c5144cde181f113",
+            "to": "difficulty_9",
+            "type": "has_difficulty",
+            "created_at": "2026-07-16T22:41:56.287686"
+        }
+    ],
     "metadata": {
         "created": "2026-01-01",
-        "last_updated": "2026-01-01",
-        "total_entities": 2,
-        "total_relationships": 0
+        "last_updated": "2026-07-16T22:41:56.287729",
+        "total_entities": 3,
+        "total_relationships": 2
+    },
+    "categories": {
+        "Fusion": {
+            "name": "Fusion",
+            "count": 1,
+            "avg_accuracy": 95.0,
+            "created": "2026-07-16T22:41:56.287687"
+        }
     }
 }

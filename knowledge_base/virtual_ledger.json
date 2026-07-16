@@ -2,39 +2,114 @@
     "chain": [
         {
             "index": 0,
-            "timestamp": "2026-06-22T21:56:31.958377",
+            "timestamp": "2026-07-16T22:41:50.312675",
             "transactions": [
                 {
-                    "tx_id": "5dd2e2604c5cbc9771457303",
+                    "tx_id": "655b463eade727ede20a050d",
                     "sender": "genesis",
                     "recipient": "system_treasury",
                     "amount": 0.0,
-                    "timestamp": "2026-06-22T21:56:31.958337",
+                    "timestamp": "2026-07-16T22:41:50.312647",
                     "metadata": {
                         "note": "Nuclear Intelligence Genesis Block v1.0.0",
                         "version": "1.0.0",
-                        "timestamp": "2026-06-22T21:56:31.958330",
+                        "timestamp": "2026-07-16T22:41:50.312642",
                         "difficulty": 3,
                         "system": "Nuclear Intelligence Virtual Blockchain"
                     },
-                    "signature": "ef595cde0c592f7a3da665aeba332e734dd14947caf6b28b02a6f64cb1c3424e4dae78180a19bc29d6b709641c204526",
+                    "signature": "794f3c5fe7ec8891a0bff9a3566b98deabb8652d5cf92f89d10cbc19ce83bf8bc293edeae2266c0c7002a291435003c9",
                     "nonce": 0,
                     "status": "confirmed"
                 }
             ],
-            "merkle_root": "9a5b8c3e6e7cca663054cd8cfde05a03a4a36b17b472adcc5695bad88911ef49",
+            "merkle_root": "12f93294311af2ed96b0fde87f5fa0ec009260cecd683f579484a18eb6413864",
             "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-            "nonce": 1002,
-            "hash": "0926c8cbf3a511aa2d124fa29fc2eec9214902211eb3fb7860303636ce4fe263",
-            "difficulty": 1,
+            "nonce": 501,
+            "hash": "00077fdf8ec3b915eabb09206924fceb5fc1b993201ff58518880edc08a6d8a7",
+            "difficulty": 3,
             "miner": "genesis",
             "reward": 1.0,
             "tx_count": 1,
             "size_bytes": 894
+        },
+        {
+            "index": 1,
+            "timestamp": "2026-07-16T22:41:56.288350",
+            "transactions": [
+                {
+                    "tx_id": "fa5b0f66ac8ca214083ef9b8",
+                    "sender": "knowledge_creation_event",
+                    "recipient": "system_treasury",
+                    "amount": 1.0,
+                    "timestamp": "2026-07-16T22:41:56.288286",
+                    "metadata": {
+                        "cycle_id": "8e811ac7035ee670",
+                        "question": {
+                            "question": "What is the current state of tritium breeding ratio optimization in D-T fusion reactors?",
+                            "category": "Fusion",
+                            "difficulty": 9,
+                            "keywords": [
+                                "tritium",
+                                "D-T fusion",
+                                "breeding ratio",
+                                "TBR",
+                                "fusion reactor"
+                            ],
+                            "question_id": "7c5144cde181f113",
+                            "timestamp": "2026-07-16T22:41:50.299765"
+                        },
+                        "answer": {
+                            "answer": "Advanced research on: What is the current state of tritium breeding ratio optimization in D-T fusion reactors?\n\nKeywords: tritium, D-T fusion, breeding ratio, TBR, fusion reactor\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+                            "citations": [
+                                "Nuclear Intelligence Knowledge Base",
+                                "Fallback Generation"
+                            ],
+                            "novelty_score": 85,
+                            "accuracy_score": 95,
+                            "sources": [
+                                {
+                                    "title": "Fallback",
+                                    "url": "",
+                                    "type": "internal"
+                                }
+                            ],
+                            "provider": "fallback",
+                            "timestamp": "2026-07-16T22:41:55.245723"
+                        },
+                        "evaluation": {
+                            "scientific_accuracy": 95.0,
+                            "novelty_score": 85.0,
+                            "usefulness_score": 90.0,
+                            "self_consistency_check": true,
+                            "justification": "Evaluation API unavailable - Developer Mode Override.",
+                            "completeness": 90.0,
+                            "timestamp": "2026-07-16T22:41:56.287119"
+                        },
+                        "overall_score": 91.0,
+                        "checks_passed": 6,
+                        "provider": "fallback",
+                        "type": "nes_mint",
+                        "mint_time": "2026-07-16T22:41:56.288276",
+                        "version": "3.0"
+                    },
+                    "signature": "423ac4fcb537845aaa5fde4885459eae87b72341d2fb76afc187a52658e767222177e15580c9359a9b41dd73963a6fd4",
+                    "nonce": 0,
+                    "status": "confirmed"
+                }
+            ],
+            "merkle_root": "42000239860b58db6f70e0c7866126374a2698df5a5fe21815d1addfdc291f2e",
+            "previous_hash": "00077fdf8ec3b915eabb09206924fceb5fc1b993201ff58518880edc08a6d8a7",
+            "nonce": 1868,
+            "hash": "000655702e5d54dcae5cbfbfc2a836158ed6cc0a407d2b6ff46a3c2c3fbbf64b",
+            "difficulty": 3,
+            "miner": "nes_mint_bot",
+            "reward": 1.0,
+            "tx_count": 1,
+            "size_bytes": 2112
         }
     ],
     "difficulty": 3,
     "nes_supply": 0.0,
-    "total_transactions": 0,
-    "saved_at": "2026-06-22T21:56:31.963882"
+    "total_transactions": 1,
+    "saved_at": "2026-07-16T22:41:56.298937"
 }
