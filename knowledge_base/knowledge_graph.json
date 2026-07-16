@@ -11,9 +11,9 @@
                 "scientific_accuracy": 92.0,
                 "novelty_score": 78.0,
                 "usefulness_score": 85.0,
-                "created": "2026-07-16T22:41:50.167105"
+                "created": "2026-07-16T23:39:55.829016"
             },
-            "created": "2026-07-16T22:41:50.167110"
+            "created": "2026-07-16T23:39:55.829020"
         },
         "1d94037a7442ae1b": {
             "id": "1d94037a7442ae1b",
@@ -25,18 +25,18 @@
                 "scientific_accuracy": 94.0,
                 "novelty_score": 82.0,
                 "usefulness_score": 88.0,
-                "created": "2026-07-16T22:41:50.167117"
+                "created": "2026-07-16T23:39:55.829023"
             },
-            "created": "2026-07-16T22:41:50.167119"
+            "created": "2026-07-16T23:39:55.829024"
         },
-        "7c5144cde181f113": {
-            "id": "7c5144cde181f113",
-            "question": "What is the current state of tritium breeding ratio optimization in D-T fusion reactors?",
-            "answer_summary": "Advanced research on: What is the current state of tritium breeding ratio optimization in D-T fusion reactors?\n\nKeywords: tritium, D-T fusion, breeding ratio, TBR, fusion reactor\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
-            "answer_full": "Advanced research on: What is the current state of tritium breeding ratio optimization in D-T fusion reactors?\n\nKeywords: tritium, D-T fusion, breeding ratio, TBR, fusion reactor\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+        "27fdf8c65ecad3b5": {
+            "id": "27fdf8c65ecad3b5",
+            "question": "How do Generation IV nuclear reactors improve safety and efficiency over Gen III?",
+            "answer_summary": "Advanced research on: How do Generation IV nuclear reactors improve safety and efficiency over Gen III?\n\nKeywords: Gen IV, reactor, safety, efficiency, SFR, GFR\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+            "answer_full": "Advanced research on: How do Generation IV nuclear reactors improve safety and efficiency over Gen III?\n\nKeywords: Gen IV, reactor, safety, efficiency, SFR, GFR\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
             "metadata": {
-                "category": "Fusion",
-                "difficulty": 9,
+                "category": "Engineering",
+                "difficulty": 7,
                 "accuracy": 95.0,
                 "novelty": 85.0,
                 "usefulness": 90.0,
@@ -54,14 +54,15 @@
                 ],
                 "provider": "fallback",
                 "keywords": [
-                    "tritium",
-                    "D-T fusion",
-                    "breeding ratio",
-                    "TBR",
-                    "fusion reactor"
+                    "Gen IV",
+                    "reactor",
+                    "safety",
+                    "efficiency",
+                    "SFR",
+                    "GFR"
                 ]
             },
-            "created_at": "2026-07-16T22:41:56.287673",
+            "created_at": "2026-07-16T23:40:02.765844",
             "access_count": 0,
             "verified": true,
             "version": "3.0",
@@ -70,32 +71,32 @@
     },
     "relationships": [
         {
-            "id": "04afed1ebc11",
-            "from": "7c5144cde181f113",
-            "to": "Fusion",
+            "id": "1cfbf48b3cdf",
+            "from": "27fdf8c65ecad3b5",
+            "to": "Engineering",
             "type": "belongs_to_category",
-            "created_at": "2026-07-16T22:41:56.287681"
+            "created_at": "2026-07-16T23:40:02.765854"
         },
         {
-            "id": "bd862536da3e",
-            "from": "7c5144cde181f113",
-            "to": "difficulty_9",
+            "id": "7b6dcf546497",
+            "from": "27fdf8c65ecad3b5",
+            "to": "difficulty_7",
             "type": "has_difficulty",
-            "created_at": "2026-07-16T22:41:56.287686"
+            "created_at": "2026-07-16T23:40:02.765860"
         }
     ],
     "metadata": {
         "created": "2026-01-01",
-        "last_updated": "2026-07-16T22:41:56.287729",
+        "last_updated": "2026-07-16T23:40:02.765940",
         "total_entities": 3,
         "total_relationships": 2
     },
     "categories": {
-        "Fusion": {
-            "name": "Fusion",
+        "Engineering": {
+            "name": "Engineering",
             "count": 1,
             "avg_accuracy": 95.0,
-            "created": "2026-07-16T22:41:56.287687"
+            "created": "2026-07-16T23:40:02.765863"
         }
     }
 }

@@ -2,30 +2,30 @@
     "chain": [
         {
             "index": 0,
-            "timestamp": "2026-07-16T22:41:50.312675",
+            "timestamp": "2026-07-16T23:39:55.982146",
             "transactions": [
                 {
-                    "tx_id": "655b463eade727ede20a050d",
+                    "tx_id": "dabf0ddd68ac45ad9b8f54e6",
                     "sender": "genesis",
                     "recipient": "system_treasury",
                     "amount": 0.0,
-                    "timestamp": "2026-07-16T22:41:50.312647",
+                    "timestamp": "2026-07-16T23:39:55.982114",
                     "metadata": {
                         "note": "Nuclear Intelligence Genesis Block v1.0.0",
                         "version": "1.0.0",
-                        "timestamp": "2026-07-16T22:41:50.312642",
+                        "timestamp": "2026-07-16T23:39:55.982108",
                         "difficulty": 3,
                         "system": "Nuclear Intelligence Virtual Blockchain"
                     },
-                    "signature": "794f3c5fe7ec8891a0bff9a3566b98deabb8652d5cf92f89d10cbc19ce83bf8bc293edeae2266c0c7002a291435003c9",
+                    "signature": "0ab08064238f052f452ff0be4e5a3277628d59bf2291155ea4e38c9fee63b4d7a60b790c86216083bbda2097ae02f8ff",
                     "nonce": 0,
                     "status": "confirmed"
                 }
             ],
-            "merkle_root": "12f93294311af2ed96b0fde87f5fa0ec009260cecd683f579484a18eb6413864",
+            "merkle_root": "df450098314dccc4f4859c092618e37d9250d57665763fab45cfdf8ed6299433",
             "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-            "nonce": 501,
-            "hash": "00077fdf8ec3b915eabb09206924fceb5fc1b993201ff58518880edc08a6d8a7",
+            "nonce": 792,
+            "hash": "00058adde18d71556092bc062f712f7e85bf746f3f9f6484d9a91557ef5c9f5e",
             "difficulty": 3,
             "miner": "genesis",
             "reward": 1.0,
@@ -34,32 +34,33 @@
         },
         {
             "index": 1,
-            "timestamp": "2026-07-16T22:41:56.288350",
+            "timestamp": "2026-07-16T23:40:02.766764",
             "transactions": [
                 {
-                    "tx_id": "fa5b0f66ac8ca214083ef9b8",
+                    "tx_id": "e6ddc8a151b34bc0db00406e",
                     "sender": "knowledge_creation_event",
                     "recipient": "system_treasury",
                     "amount": 1.0,
-                    "timestamp": "2026-07-16T22:41:56.288286",
+                    "timestamp": "2026-07-16T23:40:02.766676",
                     "metadata": {
-                        "cycle_id": "8e811ac7035ee670",
+                        "cycle_id": "9dab38cec496c585",
                         "question": {
-                            "question": "What is the current state of tritium breeding ratio optimization in D-T fusion reactors?",
-                            "category": "Fusion",
-                            "difficulty": 9,
+                            "question": "How do Generation IV nuclear reactors improve safety and efficiency over Gen III?",
+                            "category": "Engineering",
+                            "difficulty": 7,
                             "keywords": [
-                                "tritium",
-                                "D-T fusion",
-                                "breeding ratio",
-                                "TBR",
-                                "fusion reactor"
+                                "Gen IV",
+                                "reactor",
+                                "safety",
+                                "efficiency",
+                                "SFR",
+                                "GFR"
                             ],
-                            "question_id": "7c5144cde181f113",
-                            "timestamp": "2026-07-16T22:41:50.299765"
+                            "question_id": "27fdf8c65ecad3b5",
+                            "timestamp": "2026-07-16T23:39:55.969273"
                         },
                         "answer": {
-                            "answer": "Advanced research on: What is the current state of tritium breeding ratio optimization in D-T fusion reactors?\n\nKeywords: tritium, D-T fusion, breeding ratio, TBR, fusion reactor\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+                            "answer": "Advanced research on: How do Generation IV nuclear reactors improve safety and efficiency over Gen III?\n\nKeywords: Gen IV, reactor, safety, efficiency, SFR, GFR\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
                             "citations": [
                                 "Nuclear Intelligence Knowledge Base",
                                 "Fallback Generation"
@@ -74,7 +75,7 @@
                                 }
                             ],
                             "provider": "fallback",
-                            "timestamp": "2026-07-16T22:41:55.245723"
+                            "timestamp": "2026-07-16T23:40:01.733848"
                         },
                         "evaluation": {
                             "scientific_accuracy": 95.0,
@@ -83,33 +84,33 @@
                             "self_consistency_check": true,
                             "justification": "Evaluation API unavailable - Developer Mode Override.",
                             "completeness": 90.0,
-                            "timestamp": "2026-07-16T22:41:56.287119"
+                            "timestamp": "2026-07-16T23:40:02.765298"
                         },
                         "overall_score": 91.0,
                         "checks_passed": 6,
                         "provider": "fallback",
                         "type": "nes_mint",
-                        "mint_time": "2026-07-16T22:41:56.288276",
+                        "mint_time": "2026-07-16T23:40:02.766666",
                         "version": "3.0"
                     },
-                    "signature": "423ac4fcb537845aaa5fde4885459eae87b72341d2fb76afc187a52658e767222177e15580c9359a9b41dd73963a6fd4",
+                    "signature": "085a88dc7307247f9c8ca45dbb6dc922b7082c0274361cb20d9249970efde838fc67a2e8e1c35221790428626f6fdd91",
                     "nonce": 0,
                     "status": "confirmed"
                 }
             ],
-            "merkle_root": "42000239860b58db6f70e0c7866126374a2698df5a5fe21815d1addfdc291f2e",
-            "previous_hash": "00077fdf8ec3b915eabb09206924fceb5fc1b993201ff58518880edc08a6d8a7",
-            "nonce": 1868,
-            "hash": "000655702e5d54dcae5cbfbfc2a836158ed6cc0a407d2b6ff46a3c2c3fbbf64b",
+            "merkle_root": "d1e0c03a1684b1dd657665ba29d5d180157a2d8896a88c014fb7f3110f8ee4d4",
+            "previous_hash": "00058adde18d71556092bc062f712f7e85bf746f3f9f6484d9a91557ef5c9f5e",
+            "nonce": 229,
+            "hash": "0003ab2c4be04f2ae8b486e907e472f16dbf234b62b922229c8c3692dc9151cd",
             "difficulty": 3,
             "miner": "nes_mint_bot",
             "reward": 1.0,
             "tx_count": 1,
-            "size_bytes": 2112
+            "size_bytes": 2083
         }
     ],
     "difficulty": 3,
     "nes_supply": 0.0,
     "total_transactions": 1,
-    "saved_at": "2026-07-16T22:41:56.298937"
+    "saved_at": "2026-07-16T23:40:02.768353"
 }
