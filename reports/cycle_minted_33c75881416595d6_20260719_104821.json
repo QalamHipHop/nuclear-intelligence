@@ -1,0 +1,54 @@
+{
+    "cycle_id": "33c75881416595d6",
+    "timestamp": "2026-07-19T10:48:21.424541",
+    "question": {
+        "question": "How can AI and machine learning optimize nuclear reactor fuel management?",
+        "category": "AI-Nuclear",
+        "difficulty": 7,
+        "keywords": [
+            "AI",
+            "machine learning",
+            "fuel management",
+            "reactor optimization"
+        ],
+        "question_id": "7b734167e4386b52",
+        "timestamp": "2026-07-19T10:48:14.401565"
+    },
+    "answer": {
+        "answer": "Advanced research on: How can AI and machine learning optimize nuclear reactor fuel management?\n\nKeywords: AI, machine learning, fuel management, reactor optimization\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+        "citations": [
+            "Nuclear Intelligence Knowledge Base",
+            "Fallback Generation"
+        ],
+        "novelty_score": 85,
+        "accuracy_score": 95,
+        "sources": [
+            {
+                "title": "Fallback",
+                "url": "",
+                "type": "internal"
+            }
+        ],
+        "provider": "fallback",
+        "timestamp": "2026-07-19T10:48:20.335061"
+    },
+    "evaluation": {
+        "scientific_accuracy": 95.0,
+        "novelty_score": 85.0,
+        "usefulness_score": 90.0,
+        "self_consistency_check": true,
+        "justification": "Evaluation API unavailable - Developer Mode Override.",
+        "completeness": 90.0,
+        "timestamp": "2026-07-19T10:48:21.410436"
+    },
+    "minted": true,
+    "tx_hash": "0003d9d6407e41476b481313f1e95a19dc4e1f1c827ef79500ec9e3988cdaa2b",
+    "developer_analysis": {
+        "error": "Developer analysis unavailable",
+        "cross_domain": [],
+        "research_gaps": []
+    },
+    "execution_time_seconds": 7.0,
+    "retry_count": 0,
+    "error": null
+}
