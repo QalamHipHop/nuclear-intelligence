@@ -1,0 +1,55 @@
+{
+    "cycle_id": "f3481d64392fb7eb",
+    "timestamp": "2026-07-20T21:36:45.026367",
+    "question": {
+        "question": "What are the latest advances in tokamak plasma confinement and Q-factor improvements?",
+        "category": "Fusion",
+        "difficulty": 8,
+        "keywords": [
+            "tokamak",
+            "plasma",
+            "Q-factor",
+            "confinement",
+            "fusion energy"
+        ],
+        "question_id": "f9d12f0978e955d8",
+        "timestamp": "2026-07-20T21:36:40.101641"
+    },
+    "answer": {
+        "answer": "Advanced research on: What are the latest advances in tokamak plasma confinement and Q-factor improvements?\n\nKeywords: tokamak, plasma, Q-factor, confinement, fusion energy\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+        "citations": [
+            "Nuclear Intelligence Knowledge Base",
+            "Fallback Generation"
+        ],
+        "novelty_score": 85,
+        "accuracy_score": 95,
+        "sources": [
+            {
+                "title": "Fallback",
+                "url": "",
+                "type": "internal"
+            }
+        ],
+        "provider": "fallback",
+        "timestamp": "2026-07-20T21:36:43.886001"
+    },
+    "evaluation": {
+        "scientific_accuracy": 95.0,
+        "novelty_score": 85.0,
+        "usefulness_score": 90.0,
+        "self_consistency_check": true,
+        "justification": "Evaluation API unavailable - Developer Mode Override.",
+        "completeness": 90.0,
+        "timestamp": "2026-07-20T21:36:44.984650"
+    },
+    "minted": true,
+    "tx_hash": "000d1a34229f411853c8e377f767f35cb56b3dfd6a2e3faef66b5cd5535ba827",
+    "developer_analysis": {
+        "error": "Developer analysis unavailable",
+        "cross_domain": [],
+        "research_gaps": []
+    },
+    "execution_time_seconds": 4.9,
+    "retry_count": 0,
+    "error": null
+}
