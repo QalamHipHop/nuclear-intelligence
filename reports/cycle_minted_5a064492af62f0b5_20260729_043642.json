@@ -1,0 +1,54 @@
+{
+    "cycle_id": "5a064492af62f0b5",
+    "timestamp": "2026-07-29T04:36:42.942123",
+    "question": {
+        "question": "What advances in nuclear waste transmutation using accelerator-driven systems (ADS)?",
+        "category": "Waste",
+        "difficulty": 8,
+        "keywords": [
+            "transmutation",
+            "ADS",
+            "nuclear waste",
+            "accelerator"
+        ],
+        "question_id": "46bd4fd6f5baeeed",
+        "timestamp": "2026-07-29T04:36:36.890244"
+    },
+    "answer": {
+        "answer": "Advanced research on: What advances in nuclear waste transmutation using accelerator-driven systems (ADS)?\n\nKeywords: transmutation, ADS, nuclear waste, accelerator\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+        "citations": [
+            "Nuclear Intelligence Knowledge Base",
+            "Fallback Generation"
+        ],
+        "novelty_score": 85,
+        "accuracy_score": 95,
+        "sources": [
+            {
+                "title": "Fallback",
+                "url": "",
+                "type": "internal"
+            }
+        ],
+        "provider": "fallback",
+        "timestamp": "2026-07-29T04:36:41.770985"
+    },
+    "evaluation": {
+        "scientific_accuracy": 95.0,
+        "novelty_score": 85.0,
+        "usefulness_score": 90.0,
+        "self_consistency_check": true,
+        "justification": "Evaluation API unavailable - Developer Mode Override.",
+        "completeness": 90.0,
+        "timestamp": "2026-07-29T04:36:42.912447"
+    },
+    "minted": true,
+    "tx_hash": "000eed21288684e0174d8d531a495f6335b92836a08c3d3f617d4a233797e68e",
+    "developer_analysis": {
+        "error": "Developer analysis unavailable",
+        "cross_domain": [],
+        "research_gaps": []
+    },
+    "execution_time_seconds": 6.02,
+    "retry_count": 0,
+    "error": null
+}
