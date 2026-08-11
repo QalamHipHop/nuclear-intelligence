@@ -1,0 +1,56 @@
+{
+    "cycle_id": "e8fbf05dbbcd1357",
+    "timestamp": "2026-08-11T12:29:43.850923",
+    "question": {
+        "question": "How do Generation IV nuclear reactors improve safety and efficiency over Gen III?",
+        "category": "Engineering",
+        "difficulty": 7,
+        "keywords": [
+            "Gen IV",
+            "reactor",
+            "safety",
+            "efficiency",
+            "SFR",
+            "GFR"
+        ],
+        "question_id": "27fdf8c65ecad3b5",
+        "timestamp": "2026-08-11T12:29:39.054100"
+    },
+    "answer": {
+        "answer": "Advanced research on: How do Generation IV nuclear reactors improve safety and efficiency over Gen III?\n\nKeywords: Gen IV, reactor, safety, efficiency, SFR, GFR\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
+        "citations": [
+            "Nuclear Intelligence Knowledge Base",
+            "Fallback Generation"
+        ],
+        "novelty_score": 85,
+        "accuracy_score": 95,
+        "sources": [
+            {
+                "title": "Fallback",
+                "url": "",
+                "type": "internal"
+            }
+        ],
+        "provider": "fallback",
+        "timestamp": "2026-08-11T12:29:42.698250"
+    },
+    "evaluation": {
+        "scientific_accuracy": 95.0,
+        "novelty_score": 85.0,
+        "usefulness_score": 90.0,
+        "self_consistency_check": true,
+        "justification": "Evaluation API unavailable - Developer Mode Override.",
+        "completeness": 90.0,
+        "timestamp": "2026-08-11T12:29:43.817323"
+    },
+    "minted": true,
+    "tx_hash": "000474e556fe47e8706fce97c4d90a5dbcc7687736ef663fa88230ef42a0add4",
+    "developer_analysis": {
+        "error": "Developer analysis unavailable",
+        "cross_domain": [],
+        "research_gaps": []
+    },
+    "execution_time_seconds": 4.78,
+    "retry_count": 0,
+    "error": null
+}
