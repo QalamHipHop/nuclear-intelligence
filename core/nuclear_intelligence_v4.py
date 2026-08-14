@@ -433,11 +433,13 @@ Provide a comprehensive, detailed scientific answer with equations, mechanisms, 
         )
 
         if not result or result.get("parse_error"):
-            logger.warning("⚠️ Evaluation failed, using conservative estimates")
+            # A missing evaluator is a hard quality failure, never a minting override.
+            # Demo/developer mode may keep the cycle observable, but cannot create NES.
+            logger.warning("⚠️ Evaluation unavailable; rejecting cycle and disabling mint")
             return EvaluationScore(
-                scientific_accuracy=95.0, novelty_score=85.0, usefulness_score=90.0,
-                completeness=90.0, self_consistency_check=True,
-                justification="Evaluation API unavailable - Developer Mode Override."
+                scientific_accuracy=0.0, novelty_score=0.0, usefulness_score=0.0,
+                completeness=0.0, self_consistency_check=False,
+                justification="Evaluation unavailable; minting disabled until a real evaluator responds."
             )
 
         parsed = result.get("parsed", {})

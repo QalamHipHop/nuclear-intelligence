@@ -120,9 +120,12 @@ class OperationLoop:
             except Exception as e:
                 logger.warning(f"History loading failed: {e}")
 
-    def _should_mint(self, evaluation: EvaluationScore) -> Dict[str, Any]:
-        """Determine if answer should be minted"""
+    def _should_mint(self, evaluation: EvaluationScore, answer: Optional[ResearchAnswer] = None) -> Dict[str, Any]:
+        """Determine if a genuinely researched, independently evaluated answer may be minted."""
         overall = evaluation.overall_score()
+        provider = (getattr(answer, "provider", "") or "").lower()
+        evaluator_unavailable = "evaluation unavailable" in (evaluation.justification or "").lower()
+        research_is_fallback = provider in {"fallback", "demo", "template_fallback", "unknown"}
 
         checks = {
             "accuracy": evaluation.scientific_accuracy >= self.config.min_accuracy,
@@ -137,7 +140,17 @@ class OperationLoop:
         total = len(checks)
         threshold_pct = (passed / total) * 100
 
-        should_mint = checks["overall"] and checks["consistency"]
+        should_mint = (
+            checks["overall"]
+            and checks["consistency"]
+            and not evaluator_unavailable
+            and not research_is_fallback
+        )
+        if evaluator_unavailable or research_is_fallback:
+            logger.warning(
+                "🚫 Mint blocked: real evaluator/provider required "
+                f"(provider={provider or 'missing'}, evaluator_unavailable={evaluator_unavailable})"
+            )
 
         logger.info(
             f"📊 Minting Check: {passed}/{total} ({threshold_pct:.0f}%) | "
@@ -242,7 +255,7 @@ class OperationLoop:
 
                 # Step 5: Mint or Reject
                 logger.info(f"💰 Step 5: Minting decision...")
-                mint_check = self._should_mint(evaluation)
+                mint_check = self._should_mint(evaluation, answer)
                 minted = False
                 tx_hash = None
 
