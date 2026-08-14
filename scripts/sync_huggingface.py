@@ -26,12 +26,20 @@ def sync_hf_dataset(limit: int = 25) -> int:
     try:
         from huggingface_hub import HfApi, create_repo
     except ImportError:
-        logger.warning("huggingface_hub not installed — skipping")
+        message = "huggingface_hub not installed"
+        if os.getenv("REQUIRE_HF_SYNC", "false").lower() == "true":
+            logger.error(message)
+            return 1
+        logger.warning(f"{message} — skipping")
         return 0
 
     hf_token = os.getenv("HF_TOKEN", "").strip()
     if not hf_token or not hf_token.startswith("hf_"):
-        logger.warning("HF_TOKEN not set — skipping HF sync")
+        message = "HF_TOKEN not set or invalid"
+        if os.getenv("REQUIRE_HF_SYNC", "false").lower() == "true":
+            logger.error(message)
+            return 1
+        logger.warning(f"{message} — skipping HF sync")
         return 0
 
     try:
@@ -61,6 +69,7 @@ def sync_hf_dataset(limit: int = 25) -> int:
         if reports_dir.exists():
             report_files = sorted(reports_dir.glob("cycle_*.json"), key=lambda p: p.stat().st_mtime)[-limit:]
             uploaded = 0
+            failures = 0
             for report_file in report_files:
                 try:
                     api.upload_file(
@@ -72,8 +81,12 @@ def sync_hf_dataset(limit: int = 25) -> int:
                     )
                     uploaded += 1
                 except Exception as e:
+                    failures += 1
                     logger.warning(f"Failed to upload {report_file.name}: {e}")
             logger.info(f"📤 Uploaded {uploaded}/{len(report_files)} cycle reports")
+            if report_files and uploaded == 0 and os.getenv("REQUIRE_HF_SYNC", "false").lower() == "true":
+                logger.error(f"All {failures} report uploads failed")
+                return 1
 
         for kb_file in ["knowledge_graph.json", "virtual_ledger.json", "nuclear_knowledge_base.json"]:
             kb_path = kb_dir / kb_file
@@ -163,7 +176,11 @@ def sync_github(limit: int = 10) -> int:
 
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if not token:
-        logger.warning("GITHUB_TOKEN not set — skipping GH sync")
+        message = "GITHUB_TOKEN not set"
+        if os.getenv("REQUIRE_GH_SYNC", "false").lower() == "true":
+            logger.error(message)
+            return 1
+        logger.warning(f"{message} — skipping GH sync")
         return 0
 
     try:

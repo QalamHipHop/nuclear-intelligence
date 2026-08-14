@@ -3,7 +3,9 @@
 # Keep minimal: install size and build time matter.
 
 # Core Framework
-gradio>=4.36.0,<5.0.0
+# Pin the known-compatible pair: Gradio 4.36 imports HfFolder, removed in huggingface-hub 0.26+.
+gradio==4.36.0
+huggingface-hub>=0.22,<0.26
 pandas>=2.2.0,<3.0.0
 
 # LLM & API
@@ -20,7 +22,7 @@ loguru>=0.7.2
 plotly>=5.19.0
 
 # HuggingFace
-huggingface-hub>=0.22.0
+# Kept pinned above; do not loosen beyond 0.25 while Gradio 4.36 is used.
 
 # PyGithub used by sync_huggingface.py (imported lazily)
 PyGithub>=2.3.0
