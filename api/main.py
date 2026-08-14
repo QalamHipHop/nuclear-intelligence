@@ -25,9 +25,9 @@ from loguru import logger
 from collections import defaultdict
 
 # Import core components
-from core.nuclear_intelligence import NuclearIntelligenceCore, ResearchQuestion
-from core.operation_loop import OperationLoop, OperationLoopConfig
-from blockchain.virtual_ledger import VirtualLedger
+from core.nuclear_intelligence_v4 import ResearchQuestion
+from core.operation_loop import OperationLoop
+from core.runtime import RuntimeSettings, build_runtime, runtime_public_status
 
 # ─── Initialize FastAPI ───────────────────────────────────────────
 
@@ -123,29 +123,23 @@ class TransactionRequest(BaseModel):
 
 # ─── Global State ──────────────────────────────────────────────────
 
-core: Optional[NuclearIntelligenceCore] = None
-ledger: Optional[VirtualLedger] = None
+core = None
+ledger = None
 op_loop: Optional[OperationLoop] = None
+runtime_settings: Optional[RuntimeSettings] = None
 start_time = datetime.now()
 
 
 def init_components():
     """Initialize all core components"""
-    global core, ledger, op_loop
+    global core, ledger, op_loop, runtime_settings
     try:
-        logger.info("🚀 Initializing API components...")
-        core = NuclearIntelligenceCore()
-        ledger = VirtualLedger()
-        config = OperationLoopConfig(
-            interval_minutes=int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", 30)),
-            min_accuracy=float(os.getenv("SCIENTIFIC_ACCURACY_THRESHOLD", 93.0)),
-            min_novelty=float(os.getenv("MIN_NOVELTY_THRESHOLD", 70.0)),
-            min_usefulness=float(os.getenv("MIN_USEFULNESS_THRESHOLD", 75.0)),
-            min_overall=float(os.getenv("MIN_OVERALL_SCORE", 82.0)),
-            developer_mode=os.getenv("DEVELOPER_MODE", "true").lower() == "true",
+        logger.info("🚀 Initializing API components from canonical runtime...")
+        core, op_loop, ledger, runtime_settings = build_runtime()
+        logger.info(
+            f"✅ API initialized: {len(core.llm._available_providers)} providers, "
+            f"{ledger.nes_supply} NES, runtime={runtime_settings.root}"
         )
-        op_loop = OperationLoop(core, ledger, config=config)
-        logger.info(f"✅ API initialized: {len(core.llm._available_providers)} providers, {ledger.nes_supply} NES")
     except Exception as e:
         logger.error(f"❌ Init error: {e}")
 
@@ -200,7 +194,8 @@ async def health():
         "providers": {
             "available": len(core.llm._available_providers) if core else 0,
             "active": core.llm._current_provider if core else None,
-        }
+        },
+        "runtime": runtime_public_status(runtime_settings) if runtime_settings else None,
     }
 
 @app.get("/status")

@@ -50,44 +50,14 @@ def is_hf_space() -> bool:
 
 def run_full_cycle() -> int:
     """Run a cycle using the full core/ pipeline (for GitHub Actions)."""
-    from core.nuclear_intelligence import NuclearIntelligenceCore
-    from core.operation_loop import OperationLoop, OperationLoopConfig
-    from blockchain.virtual_ledger import VirtualLedger
+    from core.runtime import build_runtime
 
     logger.info("════════════════════════════════════════════════════════════")
     logger.info("⚛️  Nuclear Intelligence v5.0 — Full Pipeline (core/)")
     logger.info("════════════════════════════════════════════════════════════")
 
-    config = OperationLoopConfig(
-        interval_minutes=int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", "30")),
-        min_accuracy=float(os.getenv("MIN_ACCURACY", "70")),
-        min_novelty=float(os.getenv("MIN_NOVELTY", "60")),
-        min_usefulness=float(os.getenv("MIN_USEFULNESS", "60")),
-        min_overall=float(os.getenv("MIN_OVERALL", "65")),
-        min_completeness=float(os.getenv("MIN_COMPLETENESS", "40")),
-        questions_per_cycle=1,
-        developer_mode=os.getenv("DEVELOPER_MODE", "true").lower() == "true",
-        web_search_enabled=True,
-        save_reports=True,
-        max_retries=3,
-        retry_delay=5,
-        sync_to_hf=True,
-        sync_to_gh=True,
-    )
-
-    core = NuclearIntelligenceCore(
-        provider_chain=[
-            "huggingface", "deepseek", "groq", "gemini",
-            "together", "fireworks", "aimlapi",
-        ],
-    )
-    ledger = VirtualLedger(
-        ledger_file="knowledge_base/virtual_ledger.json",
-        difficulty=int(os.getenv("POW_DIFFICULTY", "3")),
-    )
-    loop = OperationLoop(core=core, ledger=ledger, config=config)
-
-    result = loop.run_cycle(developer_mode=config.developer_mode)
+    core, loop, ledger, settings = build_runtime()
+    result = loop.run_cycle(developer_mode=settings.developer_mode)
 
     # Pretty-print
     status = "✅ MINTED" if result.minted else "❌ REJECTED"
@@ -123,7 +93,7 @@ def run_hf_cycle() -> int:
     logger.info(f"LLM providers: {adapter.providers}")
     logger.info(f"NES supply:    {adapter.nes_supply}")
 
-    result = adapter.run_cycle(dev_mode=True)
+    result = adapter.run_cycle()
     if "error" in result and "question" not in result:
         logger.error(f"Cycle failed: {result['error']}")
         return 1
