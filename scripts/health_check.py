@@ -29,10 +29,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-# Quiet the loguru default sink during health check
-from loguru import logger
-logger.remove()
-logger.add(sys.stderr, level="WARNING")
+# Prefer loguru when installed, but keep smoke tests runnable in minimal CI images.
+try:
+    from loguru import logger
+    logger.remove()
+    logger.add(sys.stderr, level="WARNING")
+except ImportError:
+    import logging
+    logger = logging.getLogger("health_check")
+    logger.addHandler(logging.NullHandler())
 
 
 RESULTS: list[tuple[str, bool, str]] = []

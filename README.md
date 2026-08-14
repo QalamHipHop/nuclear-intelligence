@@ -92,6 +92,23 @@ python scripts/run_operation_cycle.py  # one cycle
 python -m uvicorn api.health:app --reload  # API on :8000
 ```
 
+### Production API hardening
+The API keeps local development open when `API_KEY` is empty, but supports production hardening without code changes. Set a long random `API_KEY`, restrict `CORS_ORIGINS` to trusted origins, keep `RATE_LIMIT_ENABLED=true`, and send protected requests with `Authorization: Bearer <API_KEY>`. The existing health probe remains available, while `/ready`, `/stats`, `/chain`, `/recent`, `/search`, `/metrics`, and `/cycle` require the bearer key when configured. `/cycle` rejects concurrent runs with HTTP 409 to prevent interleaved ledger writes. Every response includes `X-Request-ID` and `X-Process-Time-ms` for operational tracing.
+
+```bash
+API_KEY="replace-with-a-long-random-secret" \\
+CORS_ORIGINS="https://your-console.example" \\
+RATE_LIMIT_ENABLED=true \\
+python -m uvicorn api.health:app --host 0.0.0.0 --port 8000
+```
+
+The new `/metrics` endpoint exposes non-secret operational counters for the LLM engine, history, and ledger. Run the project smoke tests and API security tests with:
+
+```bash
+python scripts/health_check.py
+python -m unittest tests.test_api_security
+```
+
 ---
 
 ## 🔑 Required Secrets
@@ -190,7 +207,8 @@ Run locally: `uvicorn api.health:app --port 8000`
 | GET | `/chain` | Blockchain stats |
 | GET | `/recent?limit=20` | Recent cycles |
 | GET | `/search?q=...` | Search knowledge graph |
-| POST | `/cycle` | Trigger a research cycle |
+| GET | `/metrics` | Non-secret operational metrics |
+| POST | `/cycle` | Trigger a research cycle; rejects concurrent runs |
 | POST | `/cycle` with `{"question": "..."}` | Direct Q&A |
 
 Full docs at `/docs` (Swagger UI).
@@ -215,6 +233,9 @@ The chain is a real blockchain:
 ---
 
 ## 🧪 Testing
+
+The repository now includes a dependency-light API security suite covering route registration, bearer-token validation, opt-in authentication, and concurrent rate limiting.
+
 
 ```bash
 # Quick import + smoke test
