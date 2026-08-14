@@ -15,6 +15,8 @@ from loguru import logger
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from core.runtime_config import read_secret, validate_secret
+
 # Configure logging
 logger.remove()
 logger.add(sys.stdout, level="INFO", colorize=True,
@@ -33,9 +35,10 @@ def sync_hf_dataset(limit: int = 25) -> int:
         logger.warning(f"{message} — skipping")
         return 0
 
-    hf_token = os.getenv("HF_TOKEN", "").strip()
-    if not hf_token or not hf_token.startswith("hf_"):
-        message = "HF_TOKEN not set or invalid"
+    hf_status = validate_secret("HF_TOKEN", prefix="hf_")
+    hf_token = read_secret("HF_TOKEN")
+    if not hf_status.usable:
+        message = "HF_TOKEN is not configured with a valid environment-backed shape"
         if os.getenv("REQUIRE_HF_SYNC", "false").lower() == "true":
             logger.error(message)
             return 1
@@ -48,7 +51,7 @@ def sync_hf_dataset(limit: int = 25) -> int:
             user = api.whoami()
             logger.info(f"Authenticated to HF as: {user.get('name', 'unknown')}")
         except Exception as e:
-            logger.warning(f"HF auth check failed: {e}")
+            logger.warning("HF auth check failed; token was rejected or lacks access")
 
         dataset_repo = os.getenv("HF_DATASET_REPO", "Qalam/nuclear-intelligence-dataset")
         try:
@@ -162,7 +165,7 @@ MIT
 
         return 0
     except Exception as e:
-        logger.error(f"HF dataset sync error: {e}")
+        logger.error("HF dataset sync error; inspect credential scope and repository access")
         return 1
 
 
@@ -174,9 +177,10 @@ def sync_github(limit: int = 10) -> int:
         logger.warning("PyGithub not installed — skipping GH sync")
         return 0
 
-    token = os.getenv("GITHUB_TOKEN", "").strip()
-    if not token:
-        message = "GITHUB_TOKEN not set"
+    gh_status = validate_secret("GITHUB_TOKEN")
+    token = read_secret("GITHUB_TOKEN")
+    if not gh_status.usable:
+        message = "GITHUB_TOKEN is not configured in the environment"
         if os.getenv("REQUIRE_GH_SYNC", "false").lower() == "true":
             logger.error(message)
             return 1
@@ -222,7 +226,7 @@ def sync_github(limit: int = 10) -> int:
                     logger.warning(f"GH upload failed for {kb_file}: {e}")
         return 0
     except Exception as e:
-        logger.error(f"GH sync error: {e}")
+        logger.error("GH sync error; inspect token scope and repository permissions")
         return 1
 
 
