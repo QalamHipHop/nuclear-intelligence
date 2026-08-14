@@ -11,9 +11,9 @@
                 "scientific_accuracy": 92.0,
                 "novelty_score": 78.0,
                 "usefulness_score": 85.0,
-                "created": "2026-07-16T23:39:55.829016"
+                "created": "2026-08-14T21:07:50.680941"
             },
-            "created": "2026-07-16T23:39:55.829020"
+            "created": "2026-08-14T21:07:50.680945"
         },
         "1d94037a7442ae1b": {
             "id": "1d94037a7442ae1b",
@@ -25,78 +25,16 @@
                 "scientific_accuracy": 94.0,
                 "novelty_score": 82.0,
                 "usefulness_score": 88.0,
-                "created": "2026-07-16T23:39:55.829023"
+                "created": "2026-08-14T21:07:50.680954"
             },
-            "created": "2026-07-16T23:39:55.829024"
-        },
-        "27fdf8c65ecad3b5": {
-            "id": "27fdf8c65ecad3b5",
-            "question": "How do Generation IV nuclear reactors improve safety and efficiency over Gen III?",
-            "answer_summary": "Advanced research on: How do Generation IV nuclear reactors improve safety and efficiency over Gen III?\n\nKeywords: Gen IV, reactor, safety, efficiency, SFR, GFR\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
-            "answer_full": "Advanced research on: How do Generation IV nuclear reactors improve safety and efficiency over Gen III?\n\nKeywords: Gen IV, reactor, safety, efficiency, SFR, GFR\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
-            "metadata": {
-                "category": "Engineering",
-                "difficulty": 7,
-                "accuracy": 95.0,
-                "novelty": 85.0,
-                "usefulness": 90.0,
-                "completeness": 90.0,
-                "citations": [
-                    "Nuclear Intelligence Knowledge Base",
-                    "Fallback Generation"
-                ],
-                "sources": [
-                    {
-                        "title": "Fallback",
-                        "url": "",
-                        "type": "internal"
-                    }
-                ],
-                "provider": "fallback",
-                "keywords": [
-                    "Gen IV",
-                    "reactor",
-                    "safety",
-                    "efficiency",
-                    "SFR",
-                    "GFR"
-                ]
-            },
-            "created_at": "2026-07-16T23:40:02.765844",
-            "access_count": 0,
-            "verified": true,
-            "version": "3.0",
-            "relationships": []
+            "created": "2026-08-14T21:07:50.680957"
         }
     },
-    "relationships": [
-        {
-            "id": "1cfbf48b3cdf",
-            "from": "27fdf8c65ecad3b5",
-            "to": "Engineering",
-            "type": "belongs_to_category",
-            "created_at": "2026-07-16T23:40:02.765854"
-        },
-        {
-            "id": "7b6dcf546497",
-            "from": "27fdf8c65ecad3b5",
-            "to": "difficulty_7",
-            "type": "has_difficulty",
-            "created_at": "2026-07-16T23:40:02.765860"
-        }
-    ],
+    "relationships": [],
     "metadata": {
         "created": "2026-01-01",
-        "last_updated": "2026-07-16T23:40:02.765940",
-        "total_entities": 3,
-        "total_relationships": 2
-    },
-    "categories": {
-        "Engineering": {
-            "name": "Engineering",
-            "count": 1,
-            "avg_accuracy": 95.0,
-            "created": "2026-07-16T23:40:02.765863"
-        }
+        "last_updated": "2026-01-01",
+        "total_entities": 2,
+        "total_relationships": 0
     }
 }

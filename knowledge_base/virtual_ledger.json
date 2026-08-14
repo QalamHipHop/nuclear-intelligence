@@ -2,115 +2,39 @@
     "chain": [
         {
             "index": 0,
-            "timestamp": "2026-07-16T23:39:55.982146",
+            "timestamp": "2026-08-14T21:07:50.825692",
             "transactions": [
                 {
-                    "tx_id": "dabf0ddd68ac45ad9b8f54e6",
+                    "tx_id": "87108173d9058bbe9d48cfcc",
                     "sender": "genesis",
                     "recipient": "system_treasury",
                     "amount": 0.0,
-                    "timestamp": "2026-07-16T23:39:55.982114",
+                    "timestamp": "2026-08-14T21:07:50.825649",
                     "metadata": {
                         "note": "Nuclear Intelligence Genesis Block v1.0.0",
                         "version": "1.0.0",
-                        "timestamp": "2026-07-16T23:39:55.982108",
+                        "timestamp": "2026-08-14T21:07:50.825643",
                         "difficulty": 3,
                         "system": "Nuclear Intelligence Virtual Blockchain"
                     },
-                    "signature": "0ab08064238f052f452ff0be4e5a3277628d59bf2291155ea4e38c9fee63b4d7a60b790c86216083bbda2097ae02f8ff",
+                    "signature": "40fc8bf27b9ec10be0aec4af445c8dd265f4f7af9db11e901b0405822fe1ce82ee87b388b93e8cba74ba379fd6f4f1c5",
                     "nonce": 0,
                     "status": "confirmed"
                 }
             ],
-            "merkle_root": "df450098314dccc4f4859c092618e37d9250d57665763fab45cfdf8ed6299433",
+            "merkle_root": "6f1d8de9fae25aa85330fae4b5fcc67628e2ea1cce19705c30cd378a8478bbae",
             "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-            "nonce": 792,
-            "hash": "00058adde18d71556092bc062f712f7e85bf746f3f9f6484d9a91557ef5c9f5e",
+            "nonce": 875,
+            "hash": "000db18d810df49aacb067950f5ae92bcbffa25a523be7f7516507a3e1975150",
             "difficulty": 3,
             "miner": "genesis",
             "reward": 1.0,
             "tx_count": 1,
             "size_bytes": 894
-        },
-        {
-            "index": 1,
-            "timestamp": "2026-07-16T23:40:02.766764",
-            "transactions": [
-                {
-                    "tx_id": "e6ddc8a151b34bc0db00406e",
-                    "sender": "knowledge_creation_event",
-                    "recipient": "system_treasury",
-                    "amount": 1.0,
-                    "timestamp": "2026-07-16T23:40:02.766676",
-                    "metadata": {
-                        "cycle_id": "9dab38cec496c585",
-                        "question": {
-                            "question": "How do Generation IV nuclear reactors improve safety and efficiency over Gen III?",
-                            "category": "Engineering",
-                            "difficulty": 7,
-                            "keywords": [
-                                "Gen IV",
-                                "reactor",
-                                "safety",
-                                "efficiency",
-                                "SFR",
-                                "GFR"
-                            ],
-                            "question_id": "27fdf8c65ecad3b5",
-                            "timestamp": "2026-07-16T23:39:55.969273"
-                        },
-                        "answer": {
-                            "answer": "Advanced research on: How do Generation IV nuclear reactors improve safety and efficiency over Gen III?\n\nKeywords: Gen IV, reactor, safety, efficiency, SFR, GFR\n\nThis is a complex nuclear science topic requiring detailed technical analysis across multiple domains including physics, engineering, and materials science.",
-                            "citations": [
-                                "Nuclear Intelligence Knowledge Base",
-                                "Fallback Generation"
-                            ],
-                            "novelty_score": 85,
-                            "accuracy_score": 95,
-                            "sources": [
-                                {
-                                    "title": "Fallback",
-                                    "url": "",
-                                    "type": "internal"
-                                }
-                            ],
-                            "provider": "fallback",
-                            "timestamp": "2026-07-16T23:40:01.733848"
-                        },
-                        "evaluation": {
-                            "scientific_accuracy": 95.0,
-                            "novelty_score": 85.0,
-                            "usefulness_score": 90.0,
-                            "self_consistency_check": true,
-                            "justification": "Evaluation API unavailable - Developer Mode Override.",
-                            "completeness": 90.0,
-                            "timestamp": "2026-07-16T23:40:02.765298"
-                        },
-                        "overall_score": 91.0,
-                        "checks_passed": 6,
-                        "provider": "fallback",
-                        "type": "nes_mint",
-                        "mint_time": "2026-07-16T23:40:02.766666",
-                        "version": "3.0"
-                    },
-                    "signature": "085a88dc7307247f9c8ca45dbb6dc922b7082c0274361cb20d9249970efde838fc67a2e8e1c35221790428626f6fdd91",
-                    "nonce": 0,
-                    "status": "confirmed"
-                }
-            ],
-            "merkle_root": "d1e0c03a1684b1dd657665ba29d5d180157a2d8896a88c014fb7f3110f8ee4d4",
-            "previous_hash": "00058adde18d71556092bc062f712f7e85bf746f3f9f6484d9a91557ef5c9f5e",
-            "nonce": 229,
-            "hash": "0003ab2c4be04f2ae8b486e907e472f16dbf234b62b922229c8c3692dc9151cd",
-            "difficulty": 3,
-            "miner": "nes_mint_bot",
-            "reward": 1.0,
-            "tx_count": 1,
-            "size_bytes": 2083
         }
     ],
     "difficulty": 3,
     "nes_supply": 0.0,
-    "total_transactions": 1,
-    "saved_at": "2026-07-16T23:40:02.768353"
+    "total_transactions": 0,
+    "saved_at": "2026-08-14T21:07:50.830718"
 }
