@@ -1579,7 +1579,7 @@ _autonomous_thread_started = False
 
 def _autonomous_loop():
     """Background autonomous research loop. Runs every INTERVAL minutes."""
-    interval_seconds = int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", "25")) * 60
+    interval_seconds = max(60, int(os.getenv("OPERATION_LOOP_INTERVAL_MINUTES", "25")) * 60)
     logger.info(f"🤖 Autonomous loop started (interval={interval_seconds}s)")
     # Initial warm-up delay so Space finishes starting first
     time.sleep(30)
@@ -1601,18 +1601,23 @@ def _autonomous_loop():
         time.sleep(interval_seconds)
 
 
-if __name__ == "__main__":
-    if demo is not None:
-        # Always-on autonomous loop in background
-        if os.getenv("AUTO_START_LOOP", "true").lower() == "true" and not _autonomous_thread_started:
-            try:
-                t = threading.Thread(target=_autonomous_loop, daemon=True, name="ni-autonomous")
-                t.start()
-                _autonomous_thread_started = True
-                logger.info("✅ Background autonomous loop launched")
-            except Exception as e:
-                logger.warning(f"Could not start autonomous loop: {e}")
+def _start_autonomous_loop() -> None:
+    """Start the worker independently of Gradio UI availability."""
+    global _autonomous_thread_started
+    if os.getenv("AUTO_START_LOOP", "true").lower() != "true" or _autonomous_thread_started:
+        return
+    try:
+        t = threading.Thread(target=_autonomous_loop, daemon=True, name="ni-autonomous")
+        t.start()
+        _autonomous_thread_started = True
+        logger.info("✅ Background autonomous loop launched independently of UI")
+    except Exception as e:
+        logger.warning(f"Could not start autonomous loop: {e}")
 
+
+if __name__ == "__main__":
+    _start_autonomous_loop()
+    if demo is not None:
         try:
             demo.launch(server_name="0.0.0.0", server_port=PORT, css=CSS)
         except TypeError:
