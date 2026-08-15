@@ -11,7 +11,7 @@ from api.security import RateLimiter, valid_bearer_token
 class ApiSecurityTests(unittest.TestCase):
     def test_expected_routes_exist(self) -> None:
         paths = {route.path for route in app.routes}
-        self.assertTrue({"/health", "/ready", "/metrics", "/cycle"}.issubset(paths))
+        self.assertTrue({"/health", "/ready", "/metrics", "/governance", "/cycle"}.issubset(paths))
 
     def test_bearer_validation(self) -> None:
         self.assertTrue(valid_bearer_token("Bearer secret", "secret"))

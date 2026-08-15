@@ -21,12 +21,12 @@ The workflow files request `id-token: write`. The Hugging Face CLI then exchange
 2. Only `hf_deploy/` is mirrored to the Space. Runtime reports, local state, logs, `.env` files, and GitHub workflow files never enter the deployment bundle.
 3. The Space deployment workflow fails if OIDC cannot be exchanged or the curated deployment bundle is incomplete.
 4. Research publication to the public dataset is explicit. With `REQUIRE_HF_SYNC=true`, a failed dataset publication marks the automation run as failed rather than reporting a misleading success.
-5. Until the Space Trusted Publisher has been added through the Hub settings, `HF_FALLBACK_TOKEN` may be stored only as a GitHub Actions secret. It must be a fine-grained write token scoped exclusively to `Qalam/Nuclear-Intelligence`, and it is read only inside the ephemeral deployment runner. Remove this compatibility secret once OIDC succeeds.
+5. Until the Space and Dataset Trusted Publishers have been added through the Hub settings, `HF_FALLBACK_TOKEN` may be stored only as a GitHub Actions secret. It must be a fine-grained write token scoped exclusively to `Qalam/Nuclear-Intelligence` and `Qalam/nuclear-intelligence-dataset`, and it is read only inside ephemeral GitHub runners. Remove this compatibility secret once OIDC succeeds for both repositories.
 6. Long-lived LLM-provider credentials, if any are needed for runtime inference, belong only in Hugging Face Space secrets or GitHub Action secrets. They are not part of OIDC publishing and must never be echoed in logs.
 
 ## Rotation and incident response
 
-OIDC publishing credentials expire automatically. If a trusted publisher needs to be revoked, remove it from the corresponding Hugging Face repository settings; no code change or secret rotation is required. If the temporary `HF_FALLBACK_TOKEN` compatibility secret is ever used, revoke it after OIDC activation. Review the GitHub Actions run log and the Hugging Face repository commit history when investigating a deployment incident.
+OIDC publishing credentials expire automatically. If a trusted publisher needs to be revoked, remove it from the corresponding Hugging Face repository settings; no code change or secret rotation is required. If the temporary `HF_FALLBACK_TOKEN` compatibility secret is ever used, revoke it after OIDC activation for both the Space and Dataset publishers. Review the GitHub Actions run log and the Hugging Face repository commit history when investigating a deployment incident.
 
 ## References
 

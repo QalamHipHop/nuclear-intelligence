@@ -100,14 +100,36 @@ jobs:
           # Note: a non-zero exit is OK; we still want to commit logs and sync
           # the partial report. The next step uses `if: always()`.
 
-      - name: 📤 Sync to HF Dataset with short-lived OIDC access
+      - name: Authenticate dataset publication
         if: always() && github.event.inputs.skip_hf_sync != 'true'
         env:
-          HF_OIDC_RESOURCE: datasets/Qalam/nuclear-intelligence-dataset
+          HF_FALLBACK_TOKEN: ${{ secrets.HF_FALLBACK_TOKEN }}
+        run: |
+          set -u
+          if HF_OIDC_RESOURCE="datasets/Qalam/nuclear-intelligence-dataset" hf auth whoami; then
+            echo "HF_DATASET_USE_OIDC=true" >> "$GITHUB_ENV"
+            echo "Using keyless GitHub OIDC access for the research dataset."
+          elif [ -n "${HF_FALLBACK_TOKEN:-}" ]; then
+            echo "HF_DATASET_USE_OIDC=false" >> "$GITHUB_ENV"
+            echo "Dataset trusted publisher is not configured; using the restricted fallback token."
+            hf auth login --token "$HF_FALLBACK_TOKEN"
+          else
+            echo "No dataset OIDC publisher or restricted fallback credential is available." >&2
+            exit 1
+          fi
+
+      - name: 📤 Sync to HF Dataset
+        if: always() && github.event.inputs.skip_hf_sync != 'true'
+        env:
           SYNC_TO_HF: "true"
           REQUIRE_HF_SYNC: "true"
         run: |
           set -euo pipefail
+          if [ "${HF_DATASET_USE_OIDC:-false}" = "true" ]; then
+            export HF_OIDC_RESOURCE="datasets/Qalam/nuclear-intelligence-dataset"
+          else
+            unset HF_OIDC_RESOURCE
+          fi
           HF_TOKEN="$(hf auth token)"
           test -n "$HF_TOKEN"
           trap 'unset HF_TOKEN' EXIT
