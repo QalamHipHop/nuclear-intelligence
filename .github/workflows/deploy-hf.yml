@@ -4,7 +4,16 @@ on:
   push:
     branches: [main]
     paths:
+      # Every input consumed by scripts/build_space_bundle.py must trigger a Space release.
       - "hf_deploy/**"
+      - "core/**"
+      - "blockchain/**"
+      - "knowledge_base/**"
+      - "scripts/build_space_bundle.py"
+      - "core_hf.py"
+      - "requirements.txt"
+      - "Dockerfile"
+      - "README.md"
       - ".github/workflows/deploy-hf.yml"
   workflow_dispatch:
 
@@ -40,13 +49,13 @@ jobs:
       - name: Install Hugging Face CLI
         run: python -m pip install --upgrade "huggingface_hub>=1.19.0"
 
-      - name: Verify release bundle
+      - name: Build and verify canonical Space bundle
         run: |
-          test -f hf_deploy/app.py
-          test -f hf_deploy/README.md
-          test -f hf_deploy/requirements.txt
-          test -f hf_deploy/Dockerfile
-          python -m compileall -q hf_deploy/app.py
+          python scripts/build_space_bundle.py --output .space_build
+          python -m compileall -q .space_build/app.py .space_build/core_hf.py
+          test -f .space_build/core/research_controller.py
+          test -f .space_build/core/operation_loop_v4.py
+          ! grep -q 'class NuclearIntelligenceCore' .space_build/app.py
 
       - name: Authenticate for scoped Hub publishing
         env:
@@ -72,10 +81,10 @@ jobs:
           else
             unset HF_OIDC_RESOURCE
           fi
-          hf upload "${HF_SPACE_ID}" hf_deploy . \
+          hf upload "${HF_SPACE_ID}" .space_build . \
             --repo-type space \
             --delete "*" \
-            --commit-message "Deploy ${GITHUB_SHA::7} from GitHub Actions"
+            --commit-message "Deploy canonical runtime ${GITHUB_SHA::7} from GitHub Actions"
 
       - name: Write deployment summary
         run: |
