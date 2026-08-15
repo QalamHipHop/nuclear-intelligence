@@ -1,4 +1,4 @@
-name: 🧪 Nuclear Intelligence CI
+name: Continuous Integration
 
 on:
   push:
@@ -6,122 +6,62 @@ on:
   pull_request:
     branches: [main, master, develop]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PYTHON_VERSION: "3.11"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
 
 jobs:
-  lint:
-    name: 🔍 Lint
+  quality:
+    name: Quality, safety, and regression tests
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install linters
-        run: pip install flake8
-      - name: Lint core
-        run: |
-          flake8 core/ blockchain/ scripts/ api/ --max-line-length=200 --ignore=E501,W503,F401,E722,E303,W391 --statistics || true
+    timeout-minutes: 15
 
-  test:
-    name: 🧪 Test
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install deps
-        run: |
-          pip install -q -r requirements.txt
-      - name: Smoke test: imports
-        run: |
-          python -c "from core.nuclear_intelligence import NuclearIntelligenceCore; print('✅ core imports OK')"
-          python -c "from blockchain.virtual_ledger import VirtualLedger; print('✅ blockchain imports OK')"
-      - name: Smoke test: core_hf adapter
-        run: |
-          python -c "
-          from core_hf import HeadlessHFAdapter, run_cycle, sync_to_hf_dataset
-          adapter = HeadlessHFAdapter()
-          assert adapter is not None
-          assert isinstance(adapter.ready, bool)
-          assert isinstance(adapter.providers, list)
-          print('✅ core_hf adapter instantiates cleanly')
-          print('   ready:', adapter.ready)
-          print('   providers:', adapter.providers)
-          print('   nes_supply:', adapter.nes_supply)
-          "
-      - name: Smoke test: HF core
-        run: |
-          python -c "
-          import sys, importlib.util
-          spec = importlib.util.spec_from_file_location('hf_app', 'hf_deploy/app.py')
-          mod = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(mod)
-          print('✅ HF core imports OK')
-          print('demo (UI block):', mod.demo)
-          print('Providers:', mod.core.llm._available if mod.core else 'N/A')
-          "
-      - name: Smoke test: cycle runner dispatch
-        run: |
-          python -c "
-          import sys
-          sys.path.insert(0, 'scripts')
-          import importlib.util
-          spec = importlib.util.spec_from_file_location('roc', 'scripts/run_operation_cycle.py')
-          roc = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(roc)
-          assert roc.is_hf_space() is False, 'should default to False in CI without SPACE_ID'
-          import os
-          os.environ['SPACE_ID'] = 'test/space'
-          assert roc.is_hf_space() is True, 'should detect SPACE_ID'
-          print('✅ run_operation_cycle dispatch logic OK')
-          "
-      - name: Smoke test: ledger
-        run: |
-          python -c "
-          from blockchain.virtual_ledger import VirtualLedger
-          import tempfile, os
-          with tempfile.TemporaryDirectory() as tmp:
-              ledger = VirtualLedger(ledger_file=os.path.join(tmp, 'ledger.json'), difficulty=1)
-              assert ledger.is_valid(), 'Genesis should be valid'
-              tx_hash = ledger.mint({'test': True, 'cycle_id': 'test123', 'question_text': 'test question'})
-              assert tx_hash, 'Mint should succeed'
-              assert ledger.is_valid(), 'Chain should be valid after mint'
-              assert ledger.nes_supply == 1.0, f'Expected 1.0 NES, got {ledger.nes_supply}'
-              print('✅ Ledger works correctly')
-          "
+      - name: Check out source
+        uses: actions/checkout@v4
 
-  test-deep:
-    name: 🧬 Deep Test (with HF)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install deps
-        run: pip install -q -r requirements.txt
-      - name: Test LLM (no keys → demo mode)
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install locked application dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --requirement requirements.txt
+          python -m pip check
+
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q core api blockchain scripts core_hf.py hf_deploy/app.py
+
+      - name: Run offline health checks
+        run: python scripts/health_check.py
+
+      - name: Run deterministic regression tests
         env:
-          # All empty → demo mode
           HF_TOKEN: ""
           GROQ_API_KEY: ""
           DEEPSEEK_API_KEY: ""
+          GEMINI_API_KEY: ""
+          SYNC_TO_HF: "false"
+          SYNC_TO_GITHUB: "false"
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Verify headless runtime imports without a UI server
+        env:
+          HF_TOKEN: ""
+          SYNC_TO_HF: "false"
+          SYNC_TO_GITHUB: "false"
         run: |
-          python -c "
-          import sys, importlib.util
-          spec = importlib.util.spec_from_file_location('hf_app', 'hf_deploy/app.py')
-          mod = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(mod)
-          if mod.core:
-              stats = mod.core.llm.get_stats()
-              print('✅ LLM engine stats:', stats['available_providers'])
-              assert 'demo' in stats['available_providers'], 'Should fall back to demo'
-              print('✅ Demo fallback works')
-          else:
-              print('⚠️ Core not initialized (expected if no keys)')
-          "
+          python -c "from core_hf import HeadlessHFAdapter; adapter = HeadlessHFAdapter(); assert isinstance(adapter.ready, bool); print('headless runtime ready=', adapter.ready)"

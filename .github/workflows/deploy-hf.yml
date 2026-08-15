@@ -1,4 +1,4 @@
-name: 🚀 Deploy to HuggingFace Space
+name: Deploy Hugging Face Space
 
 on:
   push:
@@ -8,86 +8,65 @@ on:
       - ".github/workflows/deploy-hf.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 concurrency:
-  group: hf-deploy
+  group: hf-space-deploy
   cancel-in-progress: false
+
+env:
+  HF_SPACE_ID: Qalam/Nuclear-Intelligence
+  HF_OIDC_RESOURCE: spaces/Qalam/Nuclear-Intelligence
 
 jobs:
   deploy:
-    name: 🚀 Sync to HF Space
+    name: Publish curated Space bundle
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    environment: production
+
     steps:
-      - name: 📥 Checkout
+      - name: Check out approved source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: 🐍 Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: 📤 Push to HF Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      - name: Install Hugging Face CLI
+        run: python -m pip install --upgrade "huggingface_hub>=1.19.0"
+
+      - name: Verify release bundle
         run: |
-          if [ -z "$HF_TOKEN" ]; then
-            echo "⚠️ HF_TOKEN not set, skipping deploy"
-            exit 0
-          fi
-          pip install -q huggingface_hub
-          python - <<'PYEOF'
-          import os
-          from pathlib import Path
-          from huggingface_hub import HfApi, upload_folder
+          test -f hf_deploy/app.py
+          test -f hf_deploy/README.md
+          test -f hf_deploy/requirements.txt
+          test -f hf_deploy/Dockerfile
+          python -m compileall -q hf_deploy/app.py
 
-          hf_token = os.environ["HF_TOKEN"]
-          space_id = os.environ.get("SPACE_ID", "Qalam/Nuclear-Intelligence")
-          api = HfApi(token=hf_token)
+      - name: Exchange GitHub identity for scoped Hub access
+        run: |
+          hf auth whoami
+          echo "Keyless Hugging Face authentication succeeded for ${HF_OIDC_RESOURCE}."
 
-          # Sync only the hf_deploy/ folder + required top-level files
-          print(f"Deploying to space: {space_id}")
-          
-          # First, create a clean staging dir
-          staging = Path("/tmp/space_stage")
-          if staging.exists():
-              import shutil
-              shutil.rmtree(staging)
-          staging.mkdir(parents=True, exist_ok=True)
+      - name: Publish the Space bundle
+        run: |
+          hf upload "${HF_SPACE_ID}" hf_deploy . \
+            --repo-type space \
+            --delete "*" \
+            --commit-message "Deploy ${GITHUB_SHA::7} from GitHub Actions"
 
-          # Copy hf_deploy contents to root of staging
-          hf_deploy = Path("hf_deploy")
-          if hf_deploy.exists():
-              for f in hf_deploy.iterdir():
-                  dst = staging / f.name
-                  if f.is_file():
-                      dst.write_bytes(f.read_bytes())
-                  else:
-                      import shutil
-                      shutil.copytree(f, dst)
-          
-          # Copy supporting files from root
-          for fname in ["requirements.txt", "README.md", ".env.template"]:
-              src = Path(fname)
-              if src.exists():
-                  (staging / fname).write_bytes(src.read_bytes())
-
-          # Make app.py point to hf_deploy's app.py if needed
-          if not (staging / "app.py").exists():
-              (staging / "app.py").write_bytes(hf_deploy.joinpath("app.py").read_bytes())
-
-          # Use lighter HF requirements
-          if (hf_deploy / "requirements.txt").exists():
-              (staging / "requirements.txt").write_bytes((hf_deploy / "requirements.txt").read_bytes())
-
-          # Upload
-          upload_folder(
-              folder_path=str(staging),
-              repo_id=space_id,
-              repo_type="space",
-              token=hf_token,
-              commit_message="Auto: deploy Nuclear Intelligence v5.0",
-          )
-          print(f"✅ Deployed to https://huggingface.co/spaces/{space_id}")
-          PYEOF
+      - name: Write deployment summary
+        run: |
+          {
+            echo "## Hugging Face deployment"
+            echo
+            echo "- Space: https://huggingface.co/spaces/${HF_SPACE_ID}"
+            echo "- Source commit: ${GITHUB_SHA}"
+            echo "- Authentication: GitHub OIDC → one-hour, Space-scoped credential"
+          } >> "$GITHUB_STEP_SUMMARY"
