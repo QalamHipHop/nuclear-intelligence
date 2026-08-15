@@ -49,10 +49,20 @@ jobs:
           test -f hf_deploy/Dockerfile
           python -m compileall -q hf_deploy/app.py
 
-      - name: Exchange GitHub identity for scoped Hub access
+      - name: Authenticate for scoped Hub publishing
+        env:
+          HF_FALLBACK_TOKEN: ${{ secrets.HF_FALLBACK_TOKEN }}
         run: |
-          hf auth whoami
-          echo "Keyless Hugging Face authentication succeeded for ${HF_OIDC_RESOURCE}."
+          set -u
+          if hf auth whoami; then
+            echo "Using keyless GitHub OIDC access for ${HF_OIDC_RESOURCE}."
+          elif [ -n "${HF_FALLBACK_TOKEN:-}" ]; then
+            echo "OIDC publisher is not configured; using the restricted fallback token."
+            hf auth login --token "$HF_FALLBACK_TOKEN"
+          else
+            echo "No OIDC publisher or restricted fallback credential is available." >&2
+            exit 1
+          fi
 
       - name: Publish the Space bundle
         run: |
@@ -68,5 +78,5 @@ jobs:
             echo
             echo "- Space: https://huggingface.co/spaces/${HF_SPACE_ID}"
             echo "- Source commit: ${GITHUB_SHA}"
-            echo "- Authentication: GitHub OIDC → one-hour, Space-scoped credential"
+            echo "- Authentication: GitHub OIDC when configured; otherwise a repository-scoped GitHub secret used only by this ephemeral runner"
           } >> "$GITHUB_STEP_SUMMARY"
