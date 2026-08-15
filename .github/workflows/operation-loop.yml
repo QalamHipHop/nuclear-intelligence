@@ -42,6 +42,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
+      id-token: write
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -70,10 +71,12 @@ jobs:
           fi
           mkdir -p reports logs
 
+      - name: Install Hugging Face CLI for keyless publishing
+        run: python -m pip install --upgrade "huggingface_hub>=1.19.0"
+
       - name: 🔬 Run Research Cycle
         id: cycle
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AIMLAPI_API_KEY: ${{ secrets.AIMLAPI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
@@ -97,12 +100,19 @@ jobs:
           # Note: a non-zero exit is OK; we still want to commit logs and sync
           # the partial report. The next step uses `if: always()`.
 
-      - name: 📤 Sync to HF Dataset
+      - name: 📤 Sync to HF Dataset with short-lived OIDC access
         if: always() && github.event.inputs.skip_hf_sync != 'true'
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_OIDC_RESOURCE: datasets/Qalam/nuclear-intelligence-dataset
+          SYNC_TO_HF: "true"
+          REQUIRE_HF_SYNC: "true"
         run: |
-          python scripts/sync_huggingface.py || echo "sync step failed but continuing"
+          set -euo pipefail
+          HF_TOKEN="$(hf auth token)"
+          test -n "$HF_TOKEN"
+          trap 'unset HF_TOKEN' EXIT
+          export HF_TOKEN
+          python scripts/sync_huggingface.py
 
       - name: 📦 Upload logs artifact
         if: always()
