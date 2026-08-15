@@ -31,6 +31,7 @@ PORT = int(os.getenv("GRADIO_PORT", "7860"))
 
 # ─── Try Imports with Fallbacks ─────────────────────────────────
 gradio_available = False
+GRADIO_IMPORT_ERROR = ""
 logger = None  # explicit init to satisfy NameError-on-attribute paths
 try:
     import gradio as gr
@@ -44,10 +45,12 @@ try:
         px = None
     gradio_available = True
 except ImportError as e:
+    GRADIO_IMPORT_ERROR = f"Missing dependency: {type(e).__name__}"
     print(f"WARNING: Missing dependency: {e}")
     print("Install with: pip install gradio pandas loguru plotly")
     gradio_available = False
 except Exception as e:
+    GRADIO_IMPORT_ERROR = f"{type(e).__name__}: {e}"
     # HF Space often hits: huggingface_hub.HfFolder removed in >=0.26
     # Gradio 4.36 oauth.py imports HfFolder, so we patch around it.
     print(f"WARNING: Gradio import crashed: {type(e).__name__}: {e}")
@@ -89,6 +92,7 @@ except Exception as e:
         gradio_available = True
         print(f"INFO: Gradio recovered via HfFolder shim (version={gr.__version__})")
     except Exception as e2:
+        GRADIO_IMPORT_ERROR = f"{type(e2).__name__}: {e2}"
         print(f"FATAL: Could not import Gradio even with shim: {type(e2).__name__}: {e2}")
         gradio_available = False
 
@@ -1133,16 +1137,17 @@ def sync_to_hf_dataset(report: Dict) -> bool:
 # ═══════════════════════════════════════════════════════════════════
 
 core: Optional[NuclearIntelligenceCore] = None
-if gradio_available:
-    try:
-        core = NuclearIntelligenceCore()
-        real_providers = [p for p in core.llm._available if p != "demo"]
-        logger.info(f"⚛️ Nuclear Intelligence v5.0 initialized")
-        logger.info(f"   LLM providers: {real_providers or 'demo (no API keys)'}")
-        logger.info(f"   NES supply: {core.ledger.nes_supply}")
-    except Exception as e:
-        logger.error(f"Initialization error: {e}")
-
+# Core readiness is independent from the presentation layer. This lets the
+# health endpoint and autonomous worker report the real failure instead of
+# silently pretending that the whole application is uninitialized.
+try:
+    core = NuclearIntelligenceCore()
+    real_providers = [p for p in core.llm._available if p != "demo"]
+    logger.info("⚛️ Nuclear Intelligence v5.0 core initialized")
+    logger.info(f"   LLM providers: {real_providers or 'demo (no API keys)'}")
+    logger.info(f"   NES supply: {core.ledger.nes_supply}")
+except Exception as e:
+    logger.error(f"Core initialization error: {type(e).__name__}: {e}")
 
 # ═══════════════════════════════════════════════════════════════════
 # UI FUNCTIONS
@@ -1625,16 +1630,23 @@ if __name__ == "__main__":
                     pass
 
                 def do_GET(self):
-                    if self.path == "/" or self.path == "/health":
+                    if self.path == "/health":
                         body = _json.dumps({
-                            "status": "ok",
+                            "status": "degraded" if not gradio_available else "ready",
                             "name": "Nuclear Intelligence",
                             "version": "5.0",
-                            "gradio_available": False,
+                            "gradio_available": gradio_available,
                             "core_initialized": core is not None,
+                            "startup_error": GRADIO_IMPORT_ERROR or None,
                         }).encode()
                         self.send_response(200)
                         self.send_header("Content-Type", "application/json")
+                    elif self.path == "/":
+                        error = GRADIO_IMPORT_ERROR or "unknown startup error"
+                        html = f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Nuclear Intelligence</title><style>body{{font-family:system-ui;background:#0b1220;color:#e5e7eb;margin:0;padding:40px}}main{{max-width:900px;margin:auto;background:#111827;border:1px solid #374151;border-radius:18px;padding:32px}}h1{{color:#67e8f9}}.bad{{color:#fca5a5}}code{{background:#1f2937;padding:3px 7px;border-radius:5px}}a{{color:#67e8f9}}</style></head><body><main><h1>⚛️ Nuclear Intelligence</h1><p class='bad'>The research UI is temporarily unavailable because the Gradio runtime did not start.</p><p><strong>Core initialized:</strong> {core is not None}</p><p><strong>Startup diagnostic:</strong> <code>{error}</code></p><p>Check <a href='/health'>/health</a> for machine-readable status. The deployment is running in diagnostic mode rather than returning a blank page.</p></main></body></html>""".encode()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/html; charset=utf-8")
+                        body = html
                         self.send_header("Content-Length", str(len(body)))
                         self.end_headers()
                         self.wfile.write(body)
