@@ -30,6 +30,8 @@ pinned: false
 - **Multilingual** — automatic Persian / English detection + localized UI labels.
 - **Security** — hardcoded API keys removed from `app.py` and LLM engines; all keys now flow through `.env` only.
 - **Health Check** — `python scripts/health_check.py` runs 9 smoke tests; available in the Gradio UI under **🛡️ Safety & Health**.
+- **Governed Research Controller** — a deterministic agenda selects under-covered civilian-energy topics, applies multi-sample evaluation plus citation and novelty gates, and records every decision with its rationale.
+- **Reviewable Development Proposals** — developer analysis can create non-executable research or documentation proposals; production-code, policy and external-chain changes remain subject to pull-request review and quality checks.
 
 See [CHANGELOG_V4.md](CHANGELOG_V4.md) for the full release notes.
 
@@ -208,6 +210,7 @@ Run locally: `uvicorn api.health:app --port 8000`
 | GET | `/recent?limit=20` | Recent cycles |
 | GET | `/search?q=...` | Search knowledge graph |
 | GET | `/metrics` | Non-secret operational metrics |
+| GET | `/governance` | Protected controller status: topic coverage, admission decisions and review-required proposals |
 | POST | `/cycle` | Trigger a research cycle; rejects concurrent runs |
 | POST | `/cycle` with `{"question": "..."}` | Direct Q&A |
 
