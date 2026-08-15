@@ -22,6 +22,7 @@ from loguru import logger
 from dataclasses import dataclass, field, asdict
 
 from core.nuclear_intelligence_v4 import NuclearIntelligenceCore, ResearchQuestion, ResearchAnswer, EvaluationScore
+from core.research_controller import ResearchController
 from blockchain.virtual_ledger import VirtualLedger
 
 
@@ -44,6 +45,8 @@ class OperationLoopConfig:
     # HF Sync
     sync_to_hf: bool = True
     sync_to_gh: bool = True
+    evaluation_samples: int = 2
+    evaluation_agreement_threshold: float = 0.80
 
 
 @dataclass
@@ -57,6 +60,7 @@ class OperationCycleResult:
     minted: bool
     tx_hash: Optional[str] = None
     developer_analysis: Optional[Dict] = None
+    governance: Optional[Dict] = None
     execution_time_seconds: float = 0.0
     retry_count: int = 0
     error: Optional[str] = None
@@ -82,6 +86,10 @@ class OperationLoop:
         self._thread: Optional[threading.Thread] = None
         self._total_cycles = 0
         self._successful_cycles = 0
+        self.controller = ResearchController(
+            evaluation_samples=self.config.evaluation_samples,
+            agreement_threshold=self.config.evaluation_agreement_threshold,
+        )
 
         self._load_history()
         logger.info(f"⚙️ Operation Loop v4.0 initialized: interval={self.config.interval_minutes}min, threshold={self.config.min_accuracy}%")
@@ -109,6 +117,7 @@ class OperationLoop:
                                 minted=d.get("minted", False),
                                 tx_hash=d.get("tx_hash"),
                                 developer_analysis=d.get("developer_analysis"),
+                                governance=d.get("governance"),
                                 execution_time_seconds=d.get("execution_time_seconds", 0),
                                 retry_count=d.get("retry_count", 0),
                                 error=d.get("error"),
@@ -120,7 +129,12 @@ class OperationLoop:
             except Exception as e:
                 logger.warning(f"History loading failed: {e}")
 
-    def _should_mint(self, evaluation: EvaluationScore, answer: Optional[ResearchAnswer] = None) -> Dict[str, Any]:
+    def _should_mint(
+        self,
+        evaluation: EvaluationScore,
+        answer: Optional[ResearchAnswer] = None,
+        controller_approved: bool = True,
+    ) -> Dict[str, Any]:
         """Determine if a genuinely researched, independently evaluated answer may be minted."""
         overall = evaluation.overall_score()
         provider = (getattr(answer, "provider", "") or "").lower()
@@ -145,11 +159,13 @@ class OperationLoop:
             and checks["consistency"]
             and not evaluator_unavailable
             and not research_is_fallback
+            and controller_approved
         )
-        if evaluator_unavailable or research_is_fallback:
+        if evaluator_unavailable or research_is_fallback or not controller_approved:
             logger.warning(
                 "🚫 Mint blocked: real evaluator/provider required "
-                f"(provider={provider or 'missing'}, evaluator_unavailable={evaluator_unavailable})"
+                f"(provider={provider or 'missing'}, evaluator_unavailable={evaluator_unavailable}, "
+                f"controller_approved={controller_approved})"
             )
 
         logger.info(
@@ -228,9 +244,14 @@ class OperationLoop:
 
         while retry_count <= self.config.max_retries:
             try:
-                # Step 1: Generate Question
+                # Step 1: Select a transparent research agenda and generate a question.
+                agenda = self.controller.select_next_category(self.history, force_category)
+                logger.info(
+                    f"🧭 Agenda selected {agenda.selected_category} "
+                    f"(priority={agenda.priority:.3f})"
+                )
                 logger.info(f"📝 Step 1: Generating question...")
-                question = self.core.generate_question(category_hint=force_category)
+                question = self.core.generate_question(category_hint=agenda.selected_category)
                 if not question:
                     raise RuntimeError("Question generation failed")
 
@@ -243,9 +264,18 @@ class OperationLoop:
                 if not answer:
                     raise RuntimeError("Research generation failed")
 
-                # Step 3: Evaluate Answer
+                # Step 3: Evaluate independently, then apply the enhanced evidence gate.
                 logger.info(f"📊 Step 3: Evaluating answer...")
-                evaluation = self.core.evaluate_answer(question, answer)
+                evaluations = [self.core.evaluate_answer(question, answer)]
+                for _ in range(1, self.config.evaluation_samples):
+                    evaluations.append(self.core.evaluate_answer(question, answer))
+                admission = self.controller.enhanced_gate(
+                    question,
+                    answer,
+                    evaluations,
+                    getattr(self.core, "kg", None),
+                )
+                evaluation = admission["evaluation"]
 
                 # Step 4: Developer Mode Analysis
                 dev_analysis = None
@@ -253,9 +283,13 @@ class OperationLoop:
                     logger.info(f"🔬 Step 4: Developer mode analysis...")
                     dev_analysis = self.core.developer_mode_analysis(question, answer)
 
-                # Step 5: Mint or Reject
+                # Step 5: Mint or reject. The controller may only tighten the gate.
                 logger.info(f"💰 Step 5: Minting decision...")
-                mint_check = self._should_mint(evaluation, answer)
+                mint_check = self._should_mint(
+                    evaluation,
+                    answer,
+                    controller_approved=bool(admission["approved"]),
+                )
                 minted = False
                 tx_hash = None
 
@@ -270,6 +304,10 @@ class OperationLoop:
                         "overall_score": mint_check["overall"],
                         "checks_passed": mint_check["passed"],
                         "provider": answer.provider,
+                        "governance": {
+                            "agenda": agenda.to_dict(),
+                            "admission": {key: value for key, value in admission.items() if key != "evaluation"},
+                        },
                     })
                     minted = True
                 else:
@@ -277,6 +315,12 @@ class OperationLoop:
 
                 # Calculate execution time
                 elapsed = round(time.time() - start_time, 2)
+
+                governance = {
+                    "agenda": agenda.to_dict(),
+                    "admission": {key: value for key, value in admission.items() if key != "evaluation"},
+                    "development_proposals": self.controller.development_proposals(dev_analysis, cycle_id),
+                }
 
                 # Create result
                 result = OperationCycleResult(
@@ -288,6 +332,7 @@ class OperationLoop:
                     minted=minted,
                     tx_hash=tx_hash,
                     developer_analysis=dev_analysis,
+                    governance=governance,
                     execution_time_seconds=elapsed,
                     retry_count=retry_count,
                     error=None,
@@ -329,6 +374,7 @@ class OperationLoop:
             minted=False,
             tx_hash=None,
             developer_analysis=None,
+            governance={"error": "cycle failed before controller decision"},
             execution_time_seconds=elapsed,
             retry_count=retry_count,
             error=last_error,
@@ -353,6 +399,7 @@ class OperationLoop:
                 json.dump(result.to_dict(), f, indent=4, ensure_ascii=False)
             
             logger.debug(f"💾 Report saved: {filename}")
+            self._save_governance_summary()
             
             # Sync to HF and GH
             if result.minted and self.config.sync_to_hf:
@@ -363,6 +410,22 @@ class OperationLoop:
                 
         except Exception as e:
             logger.error(f"Failed to save report: {e}")
+
+    def _save_governance_summary(self) -> None:
+        """Persist a compact controller status without leaking runtime secrets."""
+        reports_dir = "reports"
+        os.makedirs(reports_dir, exist_ok=True)
+        summary_path = os.path.join(reports_dir, "governance_summary.json")
+        try:
+            with open(summary_path, "w", encoding="utf-8") as summary_file:
+                json.dump(
+                    self.controller.governance_snapshot(self.history),
+                    summary_file,
+                    indent=2,
+                    ensure_ascii=False,
+                )
+        except Exception as exc:
+            logger.warning(f"Failed to write governance summary: {exc}")
 
     def start(self):
         """Start the autonomous loop"""
@@ -436,7 +499,10 @@ class OperationLoop:
                 "max_retries": self.config.max_retries,
                 "sync_to_hf": self.config.sync_to_hf,
                 "sync_to_gh": self.config.sync_to_gh,
+                "evaluation_samples": self.config.evaluation_samples,
+                "evaluation_agreement_threshold": self.config.evaluation_agreement_threshold,
             },
+            "governance": self.controller.governance_snapshot(self.history),
             "last_cycle": self.history[-1].to_dict() if self.history else None,
         }
 

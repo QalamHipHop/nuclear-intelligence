@@ -8,6 +8,7 @@ continues to work without credentials.
 from __future__ import annotations
 
 import importlib.util
+import json
 import logging
 import os
 import sys
@@ -173,7 +174,7 @@ def root() -> Dict[str, Any]:
         "service": "Nuclear Intelligence",
         "version": VERSION,
         "status": "operational",
-        "endpoints": ["/health", "/ready", "/stats", "/chain", "/recent", "/search", "/metrics", "/cycle"],
+        "endpoints": ["/health", "/ready", "/stats", "/chain", "/recent", "/search", "/metrics", "/governance", "/cycle"],
         "security": {"api_key_required": bool(configured_api_key()), "rate_limit_enabled": os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"},
         "github": "https://github.com/QalamHipHop/nuclear-intelligence",
         "huggingface": "https://huggingface.co/spaces/Qalam/Nuclear-Intelligence",
@@ -240,6 +241,21 @@ def metrics() -> Dict[str, Any]:
         "llm": llm_stats,
         "ledger": {key: chain_stats.get(key) for key in ("nes_supply", "chain_length", "difficulty") if key in chain_stats},
     }
+
+
+@app.get("/governance", dependencies=[Depends(require_api_key)])
+def governance() -> Dict[str, Any]:
+    """Return the persisted, non-secret research-controller summary."""
+    reports_dir = Path(os.getenv("NI_REPORTS_DIR", Path(__file__).parent.parent / "reports"))
+    summary_path = reports_dir / "governance_summary.json"
+    if not summary_path.exists():
+        raise HTTPException(status_code=404, detail="Governance summary not available yet")
+    try:
+        with summary_path.open("r", encoding="utf-8") as summary_file:
+            return json.load(summary_file)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Governance summary unavailable: %s", exc)
+        raise HTTPException(status_code=503, detail="Governance summary is temporarily unavailable") from exc
 
 
 @app.post("/cycle", dependencies=[Depends(require_api_key)])
