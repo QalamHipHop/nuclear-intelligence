@@ -99,7 +99,9 @@ class RuntimeSettings:
             max_retries=_env_int("MAX_RETRIES", 3),
             retry_delay=_env_int("RETRY_DELAY_SECONDS", 5),
             pow_difficulty=_env_int("POW_DIFFICULTY", 3),
-            sync_to_hf=_env_bool("SYNC_TO_HF", True),
+            # GitHub is the default durable source of truth; HF is opt-in.
+            # GitHub is the durable source of truth; HF sync is opt-in.
+            sync_to_hf=_env_bool("SYNC_TO_HF", False),
             sync_to_github=_env_bool("SYNC_TO_GITHUB", True),
         )
 

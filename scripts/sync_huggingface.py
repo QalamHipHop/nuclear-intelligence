@@ -24,7 +24,10 @@ logger.add(sys.stdout, level="INFO", colorize=True,
 
 
 def sync_hf_dataset(limit: int = 25) -> int:
-    """Upload latest cycle reports to HF dataset."""
+    """Upload reports to HF only when explicitly enabled."""
+    if os.getenv("SYNC_TO_HF", "false").strip().lower() not in {"1", "true", "yes", "on"}:
+        logger.info("HF sync disabled; GitHub remains the primary persistence target")
+        return 0
     try:
         from huggingface_hub import HfApi, create_repo
     except ImportError:
@@ -170,7 +173,10 @@ MIT
 
 
 def sync_github(limit: int = 10) -> int:
-    """Upload latest cycle reports to GitHub repo (reports/ folder)."""
+    """Optional API sync; workflow persistence uses a native git commit."""
+    if os.getenv("SYNC_TO_GITHUB", "true").strip().lower() not in {"1", "true", "yes", "on"}:
+        logger.info("GitHub API sync disabled; native workflow commit remains active")
+        return 0
     try:
         from github import Github
     except ImportError:
@@ -231,6 +237,7 @@ def sync_github(limit: int = 10) -> int:
 
 
 def main() -> int:
+    """Run optional HF sync and independent GitHub sync."""
     rc = 0
     rc |= sync_hf_dataset()
     rc |= sync_github()
