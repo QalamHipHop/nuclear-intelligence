@@ -72,6 +72,8 @@ class RuntimeSettings:
     pow_difficulty: int
     sync_to_hf: bool
     sync_to_github: bool
+    evaluation_samples: int
+    evaluation_agreement_threshold: float
 
     @classmethod
     def from_environment(cls, root: str | Path | None = None) -> "RuntimeSettings":
@@ -103,6 +105,8 @@ class RuntimeSettings:
             # GitHub is the durable source of truth; HF sync is opt-in.
             sync_to_hf=_env_bool("SYNC_TO_HF", False),
             sync_to_github=_env_bool("SYNC_TO_GITHUB", True),
+            evaluation_samples=max(1, _env_int("EVALUATION_SAMPLES", 2)),
+            evaluation_agreement_threshold=_env_float("EVALUATION_AGREEMENT_THRESHOLD", 0.80),
         )
 
     def ensure_directories(self) -> None:
@@ -125,6 +129,8 @@ class RuntimeSettings:
             retry_delay=self.retry_delay,
             sync_to_hf=self.sync_to_hf,
             sync_to_gh=self.sync_to_github,
+            evaluation_samples=self.evaluation_samples,
+            evaluation_agreement_threshold=self.evaluation_agreement_threshold,
         )
 
 
@@ -165,5 +171,7 @@ def runtime_public_status(settings: RuntimeSettings | None = None) -> dict[str, 
             "usefulness": cfg.min_usefulness,
             "overall": cfg.min_overall,
             "completeness": cfg.min_completeness,
+            "evaluation_samples": cfg.evaluation_samples,
+            "evaluation_agreement_threshold": cfg.evaluation_agreement_threshold,
         },
     }
