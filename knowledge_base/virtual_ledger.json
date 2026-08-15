@@ -2,30 +2,30 @@
     "chain": [
         {
             "index": 0,
-            "timestamp": "2026-08-15T17:40:26.507723",
+            "timestamp": "2026-08-15T17:58:21.680656",
             "transactions": [
                 {
-                    "tx_id": "8f3ab5d99d69d05f8e36f87d",
+                    "tx_id": "7a5d308589d93c8c55eb0547",
                     "sender": "genesis",
                     "recipient": "system_treasury",
                     "amount": 0.0,
-                    "timestamp": "2026-08-15T17:40:26.507688",
+                    "timestamp": "2026-08-15T17:58:21.680622",
                     "metadata": {
                         "note": "Nuclear Intelligence Genesis Block v1.0.0",
                         "version": "1.0.0",
-                        "timestamp": "2026-08-15T17:40:26.507681",
+                        "timestamp": "2026-08-15T17:58:21.680616",
                         "difficulty": 3,
                         "system": "Nuclear Intelligence Virtual Blockchain"
                     },
-                    "signature": "2d0579ae21ff8dd6e6872d57d26ea8eb7309f1c1875bf2e35b0fb287c98662e7e8ae08ae124bea0c20be3d16e1dd6b02",
+                    "signature": "39f7fdc8926bfbb8f0ae4bfd142ca27a9d61b7ab5b71d55fbb915b1faf64f5d1227becffe3a83e61c8c6fbd4e8fc9bdc",
                     "nonce": 0,
                     "status": "confirmed"
                 }
             ],
-            "merkle_root": "20406bbe850ab3093c13826ea789b9a973e2201682df1c9d0ec845fddf15dc77",
+            "merkle_root": "234f4bfeed896945e70b9cff4bddff7f1a7a58cb6f72e4218c37132805d430c8",
             "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-            "nonce": 1002,
-            "hash": "020832fa63d85126b806a66b6d8c8d774b433ce4b433737bd0b1991be4b47f2e",
+            "nonce": 1037,
+            "hash": "00a5091109141cfa9835edab47d4d7c0fdd0f6b42f971699b0756cf1646971f4",
             "difficulty": 1,
             "miner": "genesis",
             "reward": 1.0,
@@ -36,5 +36,5 @@
     "difficulty": 3,
     "nes_supply": 0.0,
     "total_transactions": 0,
-    "saved_at": "2026-08-15T17:40:26.513460"
+    "saved_at": "2026-08-15T17:58:21.686572"
 }
