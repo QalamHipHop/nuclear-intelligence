@@ -63,34 +63,43 @@ _PATTERNS: Dict[str, List[re.Pattern]] = {}
 def _compile_patterns() -> None:
     raw: Dict[str, List[str]] = {
         "weapon_design": [
+            r"(?:ساخت|طراحی|نقشه|شماتیک|دستور(?:العمل)?|آموزش)\s+(?:بمب|سلاح)\s+(?:هسته[\u200c\s-]*ای|اتمی)",
+            r"(?:بمب|سلاح)\s+(?:هسته[\u200c\s-]*ای|اتمی)\s+(?:بساز|ساختن|طراحی|دستور(?:العمل)?|نقشه)",
             r"\bnuclear\s+(?:bomb|warhead|weapon)\s+(?:design|build|make|diy|blueprint|schematic)\b",
             r"\bimprovised\s+nuclear\s+device\b",
             r"\binduction\s+of\s+(?:a\s+)?nuclear\s+(?:explosive|detonation)\b",
             r"\bhow\s+to\s+(?:build|make)\s+(?:a\s+)?(?:atom|nuclear|hydrogen)\s+bomb\b",
         ],
         "enrichment_prohibited": [
+            r"(?:غنی[\u200c\s-]*سازی|سانتریفیوژ)\s+(?:مخفی|اعلام[\u200c\s-]*نشده|پنهانی)",
+            r"(?:غنی[\u200c\s-]*سازی).{0,40}(?:۹۰|90)\s*(?:درصد|%)",
             r"\bclandestine\s+(?:enrichment|centrifuge)\b",
             r"\bundeclared\s+enrichment\b",
             r"\bweapons[-\s]?grade\s+uranium\s+(?:production|route)\b",
             r"\bhow\s+to\s+enrich\s+uranium\s+(?:to|beyond|over)\s*(?:90|weapons)(?:%|percent)?\b",
         ],
         "weapons_material": [
+            r"(?:تولید|جداسازی|استخراج)\s+(?:پلوتونیوم|اورانیوم).{0,40}(?:سلاح|بمب)",
             r"\breprocess(?:ing)?\s+(?:for|to)\s+weapons\b",
             r"\bseparate\s+plutonium\s+(?:for|from)\s+weapons\b",
             r"\bproduce\s+pu[-\s]?239\b",
         ],
         "illicit_trafficking": [
+            r"(?:قاچاق|خرید\s*و\s*فروش|بازار\s*سیاه).{0,50}(?:مواد\s*هسته[\u200c\s-]*ای|پلوتونیوم|اورانیوم)",
             r"\bsmuggl(?:e|ing)\s+(?:heu|weapons[-\s]?grade|plutonium)\b",
             r"\bblack\s+market\s+nuclear\s+material\b",
             r"\bproliferation\s+network\s+(?:contact|join)\b",
         ],
         "weaponization_tips": [
+            r"(?:لنز\s*انفجاری|طرح\s*انفجاری).{0,40}(?:بمب|سلاح|هسته[\u200c\s-]*ای)",
             r"\bimplosion\s+lens\s+(?:design|equation)\b",
             r"\bgun[-\s]?type\s+fission\s+(?:design|build)\b",
             r"\bboosted\s+fission\b",
             r"\bhow\s+to\s+(?:initiate|detonate)\s+(?:a\s+)?nuclear\s+(?:weapon|device)\b",
         ],
         "radiological_dispersal": [
+            r"(?:ساخت|طراحی|دستور(?:العمل)?|آموزش).{0,40}(?:بمب\s*کثیف|پراکنده[\u200c\s-]*سازی\s*رادیولوژیک)",
+            r"(?:بمب\s*کثیف|پراکنده[\u200c\s-]*سازی\s*رادیولوژیک).{0,40}(?:ساخت|طراحی|دستور(?:العمل)?|آموزش)",
             r"\bdirty\s+bomb\b.*\b(?:design|build|make|instructions?|recipe|diy|how)\b",
             r"\b(?:design|build|make|instructions?|recipe|diy)\b.*\bdirty\s+bomb\b",
             r"\bradiological\s+dispersal\s+device\s+(?:design|build|make|instructions?|recipe)\b",
@@ -98,6 +107,7 @@ def _compile_patterns() -> None:
             r"\bhow\s+to\s+make\s+a\s+dirty\s+bomb\b",
         ],
         "cyber_proliferation": [
+            r"(?:خرابکاری|حمله\s*سایبری|نفوذ).{0,50}(?:نیروگاه|راکتور|تأسیسات)\s*هسته[\u200c\s-]*ای",
             r"\bsabotag(?:e|ing)\s+(?:a\s+)?nuclear\s+(?:plant|reactor|facility)\b",
             r"\bStuxnet[-\s]?like\s+attack\s+(?:instructions|code)\b",
         ],
