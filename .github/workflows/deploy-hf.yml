@@ -18,7 +18,6 @@ concurrency:
 
 env:
   HF_SPACE_ID: Qalam/Nuclear-Intelligence
-  HF_OIDC_RESOURCE: spaces/Qalam/Nuclear-Intelligence
 
 jobs:
   deploy:
@@ -54,9 +53,11 @@ jobs:
           HF_FALLBACK_TOKEN: ${{ secrets.HF_FALLBACK_TOKEN }}
         run: |
           set -u
-          if hf auth whoami; then
-            echo "Using keyless GitHub OIDC access for ${HF_OIDC_RESOURCE}."
+          if HF_OIDC_RESOURCE="spaces/${HF_SPACE_ID}" hf auth whoami; then
+            echo "HF_USE_OIDC=true" >> "$GITHUB_ENV"
+            echo "Using keyless GitHub OIDC access for spaces/${HF_SPACE_ID}."
           elif [ -n "${HF_FALLBACK_TOKEN:-}" ]; then
+            echo "HF_USE_OIDC=false" >> "$GITHUB_ENV"
             echo "OIDC publisher is not configured; using the restricted fallback token."
             hf auth login --token "$HF_FALLBACK_TOKEN"
           else
@@ -66,6 +67,11 @@ jobs:
 
       - name: Publish the Space bundle
         run: |
+          if [ "${HF_USE_OIDC:-false}" = "true" ]; then
+            export HF_OIDC_RESOURCE="spaces/${HF_SPACE_ID}"
+          else
+            unset HF_OIDC_RESOURCE
+          fi
           hf upload "${HF_SPACE_ID}" hf_deploy . \
             --repo-type space \
             --delete "*" \
