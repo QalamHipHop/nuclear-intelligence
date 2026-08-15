@@ -41,12 +41,17 @@ app = FastAPI(
 
 # Middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:7860,http://localhost:8000").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 # ─── Rate Limiting ────────────────────────────────────────────────
