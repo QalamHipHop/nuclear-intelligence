@@ -45,3 +45,11 @@ The autonomous developer is proposal-first. It periodically creates `reports/dev
 | Change safety policy or thresholds | No | Yes |
 | Merge or publish a code change | No | Yes |
 | Use external credentials or make real-world commitments | No | Yes and scoped secrets |
+
+## Fully automated production mode
+
+The default production profile now enables autonomous operation, automatic developer-queue generation and Hugging Face synchronization. Each scheduler invocation remains bounded to one governed cycle, records an audit event and produces a reviewable developer queue. The system may continue operating without a browser session or manual prompting.
+
+Automatic operation includes research selection, source gathering, evaluation, ledger admission, report persistence, Dataset synchronization, health checks and developer-queue refresh. It does not include unrestricted arbitrary code execution, safety-policy changes, secret creation, uncontrolled external transactions or irreversible merges. Those boundaries are technical safeguards, not a disabled mode.
+
+For emergency shutdown, set `EMERGENCY_STOP=true` in the scheduler or deployment environment. For recovery, clear the flag only after inspecting the latest workflow log, report, ledger validity and `knowledge_base/autonomy_control.json`. The last known good Git commit remains the rollback point; do not delete reports or ledger evidence during recovery.
