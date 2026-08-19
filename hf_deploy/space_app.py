@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
+import time
 from typing import Any, Dict, Iterable, List
 
 import gradio as gr
@@ -17,13 +19,42 @@ import plotly.express as px
 from core_hf import get_adapter
 
 
-APP_VERSION = "6.1.0"
+APP_VERSION = "6.2.0"
 PUBLIC_CYCLE_ENABLED = os.getenv("PUBLIC_CYCLE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
 PUBLIC_DATASET_WRITE_ENABLED = os.getenv("PUBLIC_DATASET_WRITE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+SPACE_AUTONOMY_ENABLED = os.getenv("SPACE_AUTONOMY_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+SPACE_AUTONOMY_INTERVAL_SECONDS = max(900, int(os.getenv("SPACE_AUTONOMY_INTERVAL_SECONDS", "1800")))
+EMERGENCY_STOP = os.getenv("EMERGENCY_STOP", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _adapter():
     return get_adapter()
+
+
+_worker_stop = threading.Event()
+_worker_thread: threading.Thread | None = None
+
+
+def _autonomous_worker() -> None:
+    """Run bounded governed cycles inside the live Space process."""
+    if not SPACE_AUTONOMY_ENABLED or EMERGENCY_STOP:
+        return
+    while not _worker_stop.is_set():
+        try:
+            result = _adapter().run_cycle(dev_mode=False, public=False)
+            if result.get("minted") and os.getenv("SYNC_TO_HF", "true").lower() in {"1", "true", "yes", "on"}:
+                _adapter().sync_to_hf_dataset(result)
+        except Exception:
+            # The UI must remain available even when a provider or sync is down.
+            pass
+        _worker_stop.wait(SPACE_AUTONOMY_INTERVAL_SECONDS)
+
+
+def start_autonomous_worker() -> None:
+    global _worker_thread
+    if _worker_thread is None and SPACE_AUTONOMY_ENABLED and not EMERGENCY_STOP:
+        _worker_thread = threading.Thread(target=_autonomous_worker, name="ni-space-autonomy", daemon=True)
+        _worker_thread.start()
 
 
 def _safe_mapping(value: Any) -> Dict[str, Any]:
@@ -310,4 +341,5 @@ with gr.Blocks(title="Nuclear Intelligence", theme=gr.themes.Soft(primary_hue="c
 
 
 if __name__ == "__main__":
+    start_autonomous_worker()
     demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("GRADIO_PORT", "7860")))
