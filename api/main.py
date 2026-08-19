@@ -23,11 +23,16 @@ import time
 import json
 from loguru import logger
 from collections import defaultdict
+from uuid import uuid4
+
+from api.security import RateLimiter as PublicRateLimiter
 
 # Import core components
 from core.nuclear_intelligence_v4 import ResearchQuestion
 from core.operation_loop import OperationLoop
 from core.runtime import RuntimeSettings, build_runtime, runtime_public_status
+from core_hf import get_adapter
+from core.safety_guard import check_query, render_safe_block
 
 # ─── Initialize FastAPI ───────────────────────────────────────────
 
@@ -81,6 +86,7 @@ class RateLimiter:
         return False
 
 rate_limiter = RateLimiter()
+public_rate_limiter = PublicRateLimiter(limit=int(os.getenv("PUBLIC_RATE_LIMIT_PER_MINUTE", "60")), window_seconds=60)
 
 
 def rate_limit_dependency(req: int = 100, window: int = 60):
@@ -115,6 +121,14 @@ class CycleRequest(BaseModel):
     developer_mode: bool = False
     force_category: Optional[str] = ""
 
+
+def require_operator(request: Request) -> None:
+    """Protect state-changing and sensitive diagnostics with an operator token."""
+    expected = os.getenv("OPERATOR_API_TOKEN", "").strip()
+    provided = request.headers.get("X-Operator-Token", "").strip()
+    if not expected or not provided or provided != expected:
+        raise HTTPException(status_code=403, detail="Operator authorization required")
+
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=2, max_length=500)
     limit: int = Field(default=10, ge=1, le=100)
@@ -132,6 +146,7 @@ core = None
 ledger = None
 op_loop: Optional[OperationLoop] = None
 runtime_settings: Optional[RuntimeSettings] = None
+adapter = get_adapter()
 start_time = datetime.now()
 
 
@@ -156,7 +171,11 @@ async def startup():
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all requests"""
+    """Apply bounded public access, request tracing and safe response headers."""
+    request_id = request.headers.get("X-Request-ID", "").strip()[:80] or uuid4().hex
+    client_key = request.client.host if request.client else "unknown"
+    if not public_rate_limiter.allow(client_key):
+        return JSONResponse(status_code=429, content={"error": "Request limit reached; retry later.", "request_id": request_id})
     start = time.time()
     response = await call_next(request)
     duration = (time.time() - start) * 1000
@@ -166,6 +185,10 @@ async def log_requests(request: Request, call_next):
     if hasattr(response, 'headers'):
         response.headers["X-Response-Time"] = f"{duration:.0f}ms"
         response.headers["X-API-Version"] = "3.0.0"
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
 
     return response
 
@@ -238,20 +261,11 @@ async def get_status():
 
 @app.post("/api/v1/knowledge/ask")
 async def ask_question(request: Request, req: AskRequest):
-    """Ask a nuclear energy question"""
-    if not core:
-        raise HTTPException(503, "Core not initialized")
-
-    try:
-        result = core.ask_question(
-            question=req.question,
-            developer_mode=req.developer_mode,
-            use_web_search=req.web_search,
-        )
-        return result
-    except Exception as e:
-        logger.error(f"Ask error: {e}")
-        raise HTTPException(500, str(e))
+    """Ask through the canonical safety-checked adapter; public mode is non-developer."""
+    result = adapter.ask_question(req.question, developer_mode=False)
+    if result.get("error") and not result.get("refused"):
+        raise HTTPException(503, result["error"])
+    return result
 
 
 @app.get("/api/v1/knowledge/base")
@@ -269,17 +283,11 @@ async def get_knowledge_base():
 
 @app.get("/api/v1/knowledge/search")
 async def search_knowledge(q: str, limit: int = 10):
-    """Search knowledge graph"""
-    if not core:
-        raise HTTPException(503, "Core not initialized")
-
-    results = core.kg.search_entities(q, limit=limit)
-    return {
-        "query": q,
-        "results": results,
-        "count": len(results),
-        "total_entities": len(core.kg.graph.get("entities", {})),
-    }
+    """Search through the canonical knowledge adapter with public bounds."""
+    results = adapter.knowledge_search(q, limit)
+    if results and results[0].get("error"):
+        raise HTTPException(429 if "limit" in results[0]["error"] else 400, results[0]["error"])
+    return {"query": q, "results": results, "count": len(results)}
 
 
 @app.get("/api/v1/knowledge/entity/{entity_id}")
@@ -404,23 +412,18 @@ async def search_transactions(q: str, limit: int = 20):
 # ─── Operation Endpoints ───────────────────────────────────────────
 
 @app.post("/api/v1/operations/cycle")
-async def trigger_cycle(req: CycleRequest):
-    """Trigger a manual research cycle"""
-    if not op_loop:
-        raise HTTPException(503, "Loop not initialized")
-
-    try:
-        result = op_loop.run_cycle(
-            developer_mode=req.developer_mode,
-            force_category=req.force_category or "",
-        )
-        return result.to_dict()
-    except Exception as e:
-        raise HTTPException(500, str(e))
+async def trigger_cycle(request: Request, req: CycleRequest):
+    """Trigger a governed cycle; only an authorized operator may write state."""
+    require_operator(request)
+    result = adapter.run_cycle(dev_mode=False, public=False)
+    if result.get("error"):
+        raise HTTPException(503, result["error"])
+    return result
 
 
 @app.post("/api/v1/operations/start")
-async def start_loop():
+async def start_loop(request: Request):
+    require_operator(request)
     """Start the operation loop"""
     if not op_loop:
         raise HTTPException(503, "Loop not initialized")
@@ -430,7 +433,8 @@ async def start_loop():
 
 
 @app.post("/api/v1/operations/stop")
-async def stop_loop():
+async def stop_loop(request: Request):
+    require_operator(request)
     """Stop the operation loop"""
     if not op_loop:
         raise HTTPException(503, "Loop not initialized")
@@ -440,7 +444,8 @@ async def stop_loop():
 
 
 @app.post("/api/v1/operations/pause")
-async def pause_loop():
+async def pause_loop(request: Request):
+    require_operator(request)
     """Pause the operation loop"""
     if not op_loop:
         raise HTTPException(503, "Loop not initialized")
@@ -450,7 +455,8 @@ async def pause_loop():
 
 
 @app.post("/api/v1/operations/resume")
-async def resume_loop():
+async def resume_loop(request: Request):
+    require_operator(request)
     """Resume the operation loop"""
     if not op_loop:
         raise HTTPException(503, "Loop not initialized")
@@ -489,7 +495,8 @@ async def get_best_cycles(limit: int = 10):
 # ─── Developer Endpoints ───────────────────────────────────────────
 
 @app.get("/api/v1/developer/llm-status")
-async def llm_status():
+async def llm_status(request: Request):
+    require_operator(request)
     """Get detailed LLM provider status"""
     if not core:
         raise HTTPException(503, "Core not initialized")
@@ -502,7 +509,8 @@ async def llm_status():
 
 
 @app.get("/api/v1/developer/system-diag")
-async def system_diag():
+async def system_diag(request: Request):
+    require_operator(request)
     """Get full system diagnostics"""
     if not all([core, ledger, op_loop]):
         raise HTTPException(503, "Components not initialized")
@@ -523,7 +531,8 @@ async def system_diag():
 
 
 @app.get("/api/v1/developer/export-all")
-async def export_all():
+async def export_all(request: Request):
+    require_operator(request)
     """Export all data"""
     if not core or not ledger:
         raise HTTPException(503, "Components not initialized")
@@ -544,6 +553,7 @@ async def http_exception(request: Request, exc: HTTPException):
         content={
             "error": exc.detail,
             "status_code": exc.status_code,
+            "request_id": request.headers.get("X-Request-ID", ""),
             "path": str(request.url.path),
             "timestamp": datetime.now().isoformat(),
         }
@@ -557,7 +567,8 @@ async def global_error(request: Request, exc: Exception):
         status_code=500,
         content={
             "error": "Internal server error",
-            "type": type(exc).__name__,
+            "type": "request_failed",
+            "request_id": request.headers.get("X-Request-ID", ""),
             "path": str(request.url.path),
             "timestamp": datetime.now().isoformat(),
         }
