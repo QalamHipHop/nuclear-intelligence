@@ -11,9 +11,9 @@
                 "scientific_accuracy": 92.0,
                 "novelty_score": 78.0,
                 "usefulness_score": 85.0,
-                "created": "2026-08-19T14:02:03.995995"
+                "created": "2026-08-19T14:57:15.813035"
             },
-            "created": "2026-08-19T14:02:03.996026"
+            "created": "2026-08-19T14:57:15.813042"
         },
         "1d94037a7442ae1b": {
             "id": "1d94037a7442ae1b",
@@ -25,9 +25,9 @@
                 "scientific_accuracy": 94.0,
                 "novelty_score": 82.0,
                 "usefulness_score": 88.0,
-                "created": "2026-08-19T14:02:03.996033"
+                "created": "2026-08-19T14:57:15.813046"
             },
-            "created": "2026-08-19T14:02:03.996036"
+            "created": "2026-08-19T14:57:15.813048"
         }
     },
     "relationships": [],
