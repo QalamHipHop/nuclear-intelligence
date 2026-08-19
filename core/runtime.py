@@ -74,6 +74,9 @@ class RuntimeSettings:
     sync_to_github: bool
     evaluation_samples: int
     evaluation_agreement_threshold: float
+    public_max_query_chars: int
+    public_rate_limit_per_minute: int
+    public_cycle_enabled: bool
 
     @classmethod
     def from_environment(cls, root: str | Path | None = None) -> "RuntimeSettings":
@@ -106,7 +109,12 @@ class RuntimeSettings:
             sync_to_hf=_env_bool("SYNC_TO_HF", False),
             sync_to_github=_env_bool("SYNC_TO_GITHUB", True),
             evaluation_samples=max(1, _env_int("EVALUATION_SAMPLES", 2)),
-            evaluation_agreement_threshold=_env_float("EVALUATION_AGREEMENT_THRESHOLD", 0.80),
+            evaluation_agreement_threshold=min(1.0, max(0.0, _env_float("EVALUATION_AGREEMENT_THRESHOLD", 0.80))),
+            public_max_query_chars=min(4000, max(100, _env_int("PUBLIC_MAX_QUERY_CHARS", 2000))),
+            public_rate_limit_per_minute=min(120, max(1, _env_int("PUBLIC_RATE_LIMIT_PER_MINUTE", 20))),
+            # Public visitors may read/search/ask safely, but cannot trigger durable
+            # autonomous cycles unless an operator explicitly enables this setting.
+            public_cycle_enabled=_env_bool("PUBLIC_CYCLE_ENABLED", False),
         )
 
     def ensure_directories(self) -> None:
@@ -156,14 +164,9 @@ def runtime_public_status(settings: RuntimeSettings | None = None) -> dict[str, 
     cfg = settings or RuntimeSettings.from_environment()
     return {
         "runtime": "canonical",
-        "root": str(cfg.root),
+        # Deliberately omit absolute filesystem paths and secret diagnostics from
+        # public responses. The service exposes capability/status metadata only.
         "provider_chain": list(cfg.provider_chain),
-        "paths": {
-            "reports": str(cfg.reports_dir),
-            "knowledge_base": str(cfg.knowledge_base_dir),
-            "ledger": str(cfg.ledger_path),
-            "knowledge_graph": str(cfg.knowledge_graph_path),
-        },
         "sync": {"huggingface": cfg.sync_to_hf, "github": cfg.sync_to_github},
         "thresholds": {
             "accuracy": cfg.min_accuracy,
@@ -173,5 +176,8 @@ def runtime_public_status(settings: RuntimeSettings | None = None) -> dict[str, 
             "completeness": cfg.min_completeness,
             "evaluation_samples": cfg.evaluation_samples,
             "evaluation_agreement_threshold": cfg.evaluation_agreement_threshold,
+            "public_max_query_chars": cfg.public_max_query_chars,
+            "public_rate_limit_per_minute": cfg.public_rate_limit_per_minute,
+            "public_cycle_enabled": cfg.public_cycle_enabled,
         },
     }

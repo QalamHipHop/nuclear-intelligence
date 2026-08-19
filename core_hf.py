@@ -7,6 +7,8 @@ once in the repository's canonical runtime.
 from __future__ import annotations
 
 import json
+import time
+from collections import deque
 from pathlib import Path
 from threading import RLock
 from typing import Any, Dict, List, Optional
@@ -32,6 +34,7 @@ class HeadlessHFAdapter:
         self.settings: Optional[RuntimeSettings] = None
         self._load_error: Optional[str] = None
         self._work_lock = RLock()
+        self._public_events: deque[float] = deque()
         self._load()
 
     @property
@@ -71,7 +74,8 @@ class HeadlessHFAdapter:
             "ready": self.ready,
             "providers": self.providers,
             "nes_supply": self.nes_supply,
-            "load_error": self._load_error,
+            # Never expose exception text, filesystem paths or provider errors.
+            "degraded": bool(self._load_error),
         })
         return status
 
@@ -92,6 +96,18 @@ class HeadlessHFAdapter:
             return unavailable
         return self._loop.controller.governance_snapshot(self._loop.history)
 
+    def _allow_public_request(self) -> bool:
+        """Apply a small in-process sliding-window guard to public callbacks."""
+        limit = int(getattr(self.settings, "public_rate_limit_per_minute", 20) or 20)
+        now = time.monotonic()
+        with self._work_lock:
+            while self._public_events and now - self._public_events[0] >= 60:
+                self._public_events.popleft()
+            if len(self._public_events) >= limit:
+                return False
+            self._public_events.append(now)
+            return True
+
     def recent_cycles(self, limit: int = 25) -> List[Dict[str, Any]]:
         unavailable = self._unavailable()
         if unavailable:
@@ -105,6 +121,11 @@ class HeadlessHFAdapter:
         cleaned = " ".join((query or "").split())
         if not cleaned:
             return []
+        max_chars = int(getattr(self.settings, "public_max_query_chars", 2000) or 2000)
+        if len(cleaned) > max_chars:
+            return [{"error": f"Query exceeds the public limit of {max_chars} characters."}]
+        if not self._allow_public_request():
+            return [{"error": "Public request limit reached; please retry later."}]
         return self._core.kg.search(cleaned, max(1, min(int(limit), 50)))
 
     def ledger_status(self) -> Dict[str, Any]:
@@ -113,25 +134,34 @@ class HeadlessHFAdapter:
             return unavailable
         return {"valid": self._ledger.is_chain_valid(), **self._ledger.get_stats()}
 
-    def run_cycle(self, dev_mode: Optional[bool] = None) -> Dict[str, Any]:
+    def run_cycle(self, dev_mode: Optional[bool] = None, *, public: bool = False) -> Dict[str, Any]:
         unavailable = self._unavailable()
         if unavailable:
             return unavailable
+        if public and not bool(getattr(self.settings, "public_cycle_enabled", False)):
+            return {"error": "Public autonomous cycles are disabled; use the read-only research interface."}
+        if public and not self._allow_public_request():
+            return {"error": "Public request limit reached; please retry later."}
         with self._work_lock:
             try:
                 use_dev_mode = self.settings.developer_mode if dev_mode is None else bool(dev_mode)
                 return self._loop.run_cycle(developer_mode=use_dev_mode).to_dict()
-            except Exception as exc:
+            except Exception:
                 logger.exception("Canonical HF run_cycle failed")
-                return {"error": str(exc)}
+                return {"error": "The governed cycle failed safely; inspect operator logs."}
 
     def ask_question(self, question: str, developer_mode: bool = False) -> Dict[str, Any]:
         unavailable = self._unavailable()
         if unavailable:
             return unavailable
         cleaned = " ".join((question or "").split())
+        max_chars = int(getattr(self.settings, "public_max_query_chars", 2000) or 2000)
         if len(cleaned) < 5:
             return {"error": "Enter a question of at least five characters."}
+        if len(cleaned) > max_chars:
+            return {"error": f"Question exceeds the public limit of {max_chars} characters."}
+        if not self._allow_public_request():
+            return {"error": "Public request limit reached; please retry later."}
         query_verdict = check_query(cleaned)
         if not query_verdict.allowed:
             return {"refused": True, "message": render_safe_block(query_verdict), "verdict": query_verdict.to_dict()}
@@ -147,9 +177,9 @@ class HeadlessHFAdapter:
                     return {"refused": True, "message": render_safe_block(answer_verdict), "verdict": answer_verdict.to_dict()}
                 result["safety"] = {"allowed": True}
                 return result
-            except Exception as exc:
+            except Exception:
                 logger.exception("Canonical HF manual research failed")
-                return {"error": str(exc)}
+                return {"error": "The research request failed safely; inspect operator logs."}
 
     def export_state(self, limit: int = 25) -> Dict[str, Any]:
         unavailable = self._unavailable()

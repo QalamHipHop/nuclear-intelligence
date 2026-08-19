@@ -17,7 +17,9 @@ import plotly.express as px
 from core_hf import get_adapter
 
 
-APP_VERSION = "6.0.0"
+APP_VERSION = "6.1.0"
+PUBLIC_CYCLE_ENABLED = os.getenv("PUBLIC_CYCLE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+PUBLIC_DATASET_WRITE_ENABLED = os.getenv("PUBLIC_DATASET_WRITE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _adapter():
@@ -132,7 +134,7 @@ def cycle_table():
 
 
 def research_cycle(dev_mode: bool, sync_dataset: bool):
-    result = _adapter().run_cycle(dev_mode=dev_mode)
+    result = _adapter().run_cycle(dev_mode=False, public=True)
     if result.get("error"):
         return _markdown_error(result), governance_markdown(), cycle_table()
     evaluation = _safe_mapping(result.get("evaluation"))
@@ -142,7 +144,7 @@ def research_cycle(dev_mode: bool, sync_dataset: bool):
     answer = _safe_mapping(result.get("answer"))
     state = "✅ ACCEPTED" if result.get("minted") else "⛔ REJECTED"
     sync_note = ""
-    if sync_dataset and result.get("minted"):
+    if sync_dataset and PUBLIC_DATASET_WRITE_ENABLED and result.get("minted"):
         sync_note = f"\n\n**Dataset publication:** {'✅ completed' if _adapter().sync_to_hf_dataset(result) else '⚠️ unavailable or skipped'}"
     response = f"""## {state}
 
@@ -163,7 +165,7 @@ def research_cycle(dev_mode: bool, sync_dataset: bool):
 
 
 def manual_research(question: str, developer_mode: bool):
-    result = _adapter().ask_question(question, developer_mode=developer_mode)
+    result = _adapter().ask_question(question, developer_mode=False)
     if result.get("error"):
         return _markdown_error(result)
     if result.get("refused"):
@@ -253,13 +255,13 @@ with gr.Blocks(title="Nuclear Intelligence", theme=gr.themes.Soft(primary_hue="c
     with gr.Tabs():
         with gr.Tab("Research"):
             with gr.Row():
-                run_button = gr.Button("Run governed research cycle", variant="primary")
-                developer_mode = gr.Checkbox(label="Include development analysis", value=False)
-                sync_dataset = gr.Checkbox(label="Publish accepted report to dataset", value=False)
+                run_button = gr.Button("Run governed research cycle", variant="primary", interactive=PUBLIC_CYCLE_ENABLED)
+                developer_mode = gr.Checkbox(label="Include development analysis (operator-only)", value=False, visible=False, interactive=False)
+                sync_dataset = gr.Checkbox(label="Publish accepted report to dataset (operator-only)", value=False, visible=PUBLIC_DATASET_WRITE_ENABLED, interactive=PUBLIC_DATASET_WRITE_ENABLED)
             cycle_output = gr.Markdown("A governed cycle selects a peaceful-use topic, researches it and applies evidence gates before acceptance.")
             with gr.Accordion("Manual research", open=False):
                 manual_question = gr.Textbox(label="Research question", placeholder="How can passive safety improve small modular reactor resilience?", lines=3)
-                manual_dev = gr.Checkbox(label="Include development analysis", value=False)
+                manual_dev = gr.Checkbox(label="Include development analysis (operator-only)", value=False, visible=False, interactive=False)
                 manual_button = gr.Button("Research this question")
                 manual_output = gr.Markdown()
 
