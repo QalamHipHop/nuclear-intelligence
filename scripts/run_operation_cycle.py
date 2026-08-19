@@ -111,14 +111,34 @@ def run_hf_cycle() -> int:
     return 0
 
 
+def refresh_developer_queue() -> None:
+    """Generate a review-only developer queue from canonical proposals."""
+    if os.getenv("AUTONOMOUS_DEVELOPER_ENABLED", "true").strip().lower() not in {"1", "true", "yes", "on"}:
+        return
+    try:
+        from scripts.autonomous_developer import main as developer_main
+        developer_main()
+        logger.info("Autonomous developer queue refreshed (review-only)")
+    except Exception:
+        # Queue generation must never turn a valid research cycle into a false failure.
+        logger.exception("Autonomous developer queue refresh failed safely")
+
+
 def main() -> int:
     start = time.time()
     rc = 0
     try:
+        from core.autonomy_control import guard
+        root = Path(os.getenv("NI_PROJECT_ROOT", Path.cwd())).resolve()
+        stop_code = guard(root)
+        if stop_code:
+            logger.warning("Autonomous execution blocked by control guard")
+            return stop_code
         if is_hf_space():
             rc = run_hf_cycle()
         else:
             rc = run_full_cycle()
+        refresh_developer_queue()
     except Exception as e:
         logger.exception(f"Fatal cycle error: {e}")
         rc = 1
