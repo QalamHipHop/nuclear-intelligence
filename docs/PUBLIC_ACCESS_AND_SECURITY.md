@@ -28,3 +28,20 @@ All manual questions pass through the canonical safety guard, the shared researc
 ## Deployment checklist
 
 Before enabling any write or autonomous capability, install the pinned dependencies, run `python3 -m compileall -q core scripts api tests`, run the complete unittest suite, verify the ledger, inspect GitHub Actions logs, and confirm that the Hugging Face Space and Dataset Trusted Publishers are configured. Keep `PUBLIC_CYCLE_ENABLED=false` and `PUBLIC_DATASET_WRITE_ENABLED=false` unless an operator has reviewed the threat model and rate-limit capacity.
+
+## Autonomous operation
+
+The scheduled research loop is a bounded one-cycle-per-run process. It is protected by `AUTONOMY_ENABLED`, `EMERGENCY_STOP`, a single-run lock and an audit record at `knowledge_base/autonomy_control.json`. Setting `EMERGENCY_STOP=true` stops the next run with a non-success exit code and records the reason without deleting evidence.
+
+The autonomous developer is proposal-first. It periodically creates `reports/developer_queue.md` and opens a reviewable pull request containing the queue when it changes. It does not edit production code, merge pull requests, alter safety rules, access provider credentials, or publish external data. A human review and passing CI are required before implementation is merged.
+
+| Capability | Automatic | Human approval required |
+|---|---:|---:|
+| Select a peaceful research topic | Yes | No |
+| Run one governed research cycle | Yes, on schedule | No, while enabled |
+| Record evidence and audit metadata | Yes | No |
+| Generate developer proposals and queue | Yes | No |
+| Change production code | No | Yes, through pull request |
+| Change safety policy or thresholds | No | Yes |
+| Merge or publish a code change | No | Yes |
+| Use external credentials or make real-world commitments | No | Yes and scoped secrets |
