@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import threading
 import time
+from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 import gradio as gr
@@ -25,6 +27,8 @@ PUBLIC_DATASET_WRITE_ENABLED = os.getenv("PUBLIC_DATASET_WRITE_ENABLED", "false"
 SPACE_AUTONOMY_ENABLED = os.getenv("SPACE_AUTONOMY_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 SPACE_AUTONOMY_INTERVAL_SECONDS = max(900, int(os.getenv("SPACE_AUTONOMY_INTERVAL_SECONDS", "1800")))
 EMERGENCY_STOP = os.getenv("EMERGENCY_STOP", "false").strip().lower() in {"1", "true", "yes", "on"}
+STATE_RESTORE_ENABLED = os.getenv("STATE_RESTORE_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+DATASET_REPO = os.getenv("HF_DATASET_REPO", "Qalam/nuclear-intelligence-dataset")
 
 
 def _adapter():
@@ -33,6 +37,22 @@ def _adapter():
 
 _worker_stop = threading.Event()
 _worker_thread: threading.Thread | None = None
+
+
+def restore_state_from_dataset() -> None:
+    """Restore canonical state before the adapter is initialized after restart."""
+    if not STATE_RESTORE_ENABLED:
+        return
+    try:
+        from huggingface_hub import hf_hub_download
+        target = Path(os.getenv("NI_PROJECT_ROOT", Path.cwd())) / "knowledge_base"
+        target.mkdir(parents=True, exist_ok=True)
+        for filename in ("knowledge_graph.json", "virtual_ledger.json"):
+            downloaded = hf_hub_download(repo_id=DATASET_REPO, repo_type="dataset", filename=f"knowledge_base/{filename}")
+            shutil.copy2(downloaded, target / filename)
+    except Exception:
+        # Startup must remain available if the public Dataset is temporarily unavailable.
+        pass
 
 
 def _autonomous_worker() -> None:
@@ -341,5 +361,6 @@ with gr.Blocks(title="Nuclear Intelligence", theme=gr.themes.Soft(primary_hue="c
 
 
 if __name__ == "__main__":
+    restore_state_from_dataset()
     start_autonomous_worker()
     demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("GRADIO_PORT", "7860")))

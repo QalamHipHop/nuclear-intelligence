@@ -35,7 +35,7 @@ def _copy_item(source: Path, destination: Path) -> None:
 def _write_dockerfile(destination: Path) -> None:
     dockerfile = destination / "Dockerfile"
     dockerfile.write_text(
-        """FROM python:3.11-slim\n\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nENV GRADIO_PORT=7860\nENV HF_SPACE=true\nENV AUTO_START_LOOP=false\nENV SPACE_AUTONOMY_ENABLED=true\nENV SPACE_AUTONOMY_INTERVAL_SECONDS=1800\nENV SYNC_TO_HF=true\nEXPOSE 7860\nCMD [\"python\", \"app.py\"]\n""",
+        """FROM python:3.11-slim\n\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nENV GRADIO_PORT=7860\nENV HF_SPACE=true\nENV AUTO_START_LOOP=false\nENV SPACE_AUTONOMY_ENABLED=true\nENV SPACE_AUTONOMY_INTERVAL_SECONDS=1800\nENV SYNC_TO_HF=true\nENV STATE_RESTORE_ENABLED=true\nENV HF_DATASET_REPO=Qalam/nuclear-intelligence-dataset\nEXPOSE 7860\nCMD [\"python\", \"app.py\"]\n""",
         encoding="utf-8",
     )
 
