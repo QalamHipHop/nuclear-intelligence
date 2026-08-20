@@ -64,6 +64,7 @@ class OperationCycleResult:
     execution_time_seconds: float = 0.0
     retry_count: int = 0
     error: Optional[str] = None
+    stage_timings_seconds: Dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -121,6 +122,7 @@ class OperationLoop:
                                 execution_time_seconds=d.get("execution_time_seconds", 0),
                                 retry_count=d.get("retry_count", 0),
                                 error=d.get("error"),
+                                stage_timings_seconds=d.get("stage_timings_seconds", {}),
                             ))
                     except Exception as e:
                         logger.warning(f"Failed to load {filename}: {e}")
@@ -241,10 +243,12 @@ class OperationLoop:
 
         retry_count = 0
         last_error = None
+        stage_timings: Dict[str, float] = {}
 
         while retry_count <= self.config.max_retries:
             try:
                 # Step 1: Select a transparent research agenda and generate a question.
+                stage_start = time.perf_counter()
                 agenda = self.controller.select_next_category(self.history, force_category)
                 logger.info(
                     f"🧭 Agenda selected {agenda.selected_category} "
@@ -254,18 +258,22 @@ class OperationLoop:
                 question = self.core.generate_question(category_hint=agenda.selected_category)
                 if not question:
                     raise RuntimeError("Question generation failed")
+                stage_timings["agenda_and_question"] = round(time.perf_counter() - stage_start, 4)
 
                 # Step 2: Conduct Research
                 logger.info(f"🔬 Step 2: Conducting research...")
+                stage_start = time.perf_counter()
                 answer = self.core.conduct_research(
                     question,
                     use_web_search=self.config.web_search_enabled
                 )
                 if not answer:
                     raise RuntimeError("Research generation failed")
+                stage_timings["research"] = round(time.perf_counter() - stage_start, 4)
 
                 # Step 3: Evaluate independently, then apply the enhanced evidence gate.
                 logger.info(f"📊 Step 3: Evaluating answer...")
+                stage_start = time.perf_counter()
                 evaluations = [self.core.evaluate_answer(question, answer)]
                 for _ in range(1, self.config.evaluation_samples):
                     evaluations.append(self.core.evaluate_answer(question, answer))
@@ -276,12 +284,15 @@ class OperationLoop:
                     getattr(self.core, "kg", None),
                 )
                 evaluation = admission["evaluation"]
+                stage_timings["evaluation_and_gate"] = round(time.perf_counter() - stage_start, 4)
 
                 # Step 4: Developer Mode Analysis
                 dev_analysis = None
                 if developer_mode or self.config.developer_mode:
                     logger.info(f"🔬 Step 4: Developer mode analysis...")
+                    stage_start = time.perf_counter()
                     dev_analysis = self.core.developer_mode_analysis(question, answer)
+                    stage_timings["developer_analysis"] = round(time.perf_counter() - stage_start, 4)
 
                 # Step 5: Mint or reject. The controller may only tighten the gate.
                 logger.info(f"💰 Step 5: Minting decision...")
@@ -334,6 +345,7 @@ class OperationLoop:
                     developer_analysis=dev_analysis,
                     governance=governance,
                     execution_time_seconds=elapsed,
+                    stage_timings_seconds=stage_timings,
                     retry_count=retry_count,
                     error=None,
                 )
@@ -378,6 +390,7 @@ class OperationLoop:
             execution_time_seconds=elapsed,
             retry_count=retry_count,
             error=last_error,
+            stage_timings_seconds=stage_timings,
         )
 
         self.history.append(result)

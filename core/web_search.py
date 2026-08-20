@@ -1,5 +1,7 @@
 """Nuclear Intelligence - Web Search Engine - Free providers"""
 import os
+import time
+from collections import OrderedDict
 from typing import List, Dict, Any
 from loguru import logger
 
@@ -7,13 +9,42 @@ class WebSearchEngine:
     def __init__(self):
         self.serp_key = os.getenv("SERP_API_KEY", "")
         self._search_count = 0
+        self._cache_ttl = max(30, int(os.getenv("WEB_SEARCH_CACHE_TTL_SECONDS", "900")))
+        self._cache_size = max(8, int(os.getenv("WEB_SEARCH_CACHE_SIZE", "128")))
+        self._cache: OrderedDict[tuple[str, int], tuple[float, List[Dict[str, Any]]]] = OrderedDict()
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def search(self, query: str, num_results: int = 8) -> List[Dict[str, Any]]:
+        normalized = " ".join((query or "").split()).lower()
+        key = (normalized, max(1, min(int(num_results), 20)))
+        now = time.monotonic()
+        cached = self._cache.get(key)
+        if cached and now - cached[0] < self._cache_ttl:
+            self._cache_hits += 1
+            self._cache.move_to_end(key)
+            return [dict(item) for item in cached[1]]
+        self._cache_misses += 1
         self._search_count += 1
-        results = self._search_duckduckgo(query, num_results)
-        if results: return results
-        if self.serp_key: return self._search_serpapi(query, num_results)
-        return []
+        results = self._search_duckduckgo(normalized, key[1])
+        if not results and self.serp_key:
+            results = self._search_serpapi(normalized, key[1])
+        self._cache[key] = (now, [dict(item) for item in results])
+        self._cache.move_to_end(key)
+        while len(self._cache) > self._cache_size:
+            self._cache.popitem(last=False)
+        return results
+
+    def stats(self) -> Dict[str, Any]:
+        total = self._cache_hits + self._cache_misses
+        return {
+            "requests": self._search_count,
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "cache_hit_rate": round(self._cache_hits / total, 4) if total else 0.0,
+            "cache_entries": len(self._cache),
+            "cache_ttl_seconds": self._cache_ttl,
+        }
 
     def _search_duckduckgo(self, query: str, num_results: int) -> List[Dict]:
         # Try the modern `ddgs` package first (it replaced `duckduckgo_search`),
