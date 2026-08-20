@@ -130,7 +130,14 @@ def main() -> int:
     try:
         from core.autonomy_control import guard
         root = Path(os.getenv("NI_PROJECT_ROOT", Path.cwd())).resolve()
+        from core.autonomy_coordinator import coordination_status, may_run_cycles
+        coordination = coordination_status("github")
+        logger.info("Autonomy coordination: %s", coordination)
+        if not may_run_cycles("github"):
+            logger.warning("GitHub runner is not the configured autonomous orchestrator")
+            return 0
         stop_code = guard(root)
+
         if stop_code:
             logger.warning("Autonomous execution blocked by control guard")
             return stop_code

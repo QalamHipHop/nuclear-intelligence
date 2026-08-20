@@ -19,12 +19,14 @@ import pandas as pd
 import plotly.express as px
 
 from core_hf import get_adapter
+from core.autonomy_coordinator import coordination_status, may_run_cycles
 
 
 APP_VERSION = "6.2.0"
 PUBLIC_CYCLE_ENABLED = os.getenv("PUBLIC_CYCLE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
 PUBLIC_DATASET_WRITE_ENABLED = os.getenv("PUBLIC_DATASET_WRITE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
-SPACE_AUTONOMY_ENABLED = os.getenv("SPACE_AUTONOMY_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+SPACE_AUTONOMY_ENABLED = os.getenv("SPACE_AUTONOMY_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+AUTONOMY_ORCHESTRATOR = os.getenv("AUTONOMY_ORCHESTRATOR", "github").strip().lower()
 SPACE_AUTONOMY_INTERVAL_SECONDS = max(900, int(os.getenv("SPACE_AUTONOMY_INTERVAL_SECONDS", "1800")))
 EMERGENCY_STOP = os.getenv("EMERGENCY_STOP", "false").strip().lower() in {"1", "true", "yes", "on"}
 STATE_RESTORE_ENABLED = os.getenv("STATE_RESTORE_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
@@ -57,7 +59,7 @@ def restore_state_from_dataset() -> None:
 
 def _autonomous_worker() -> None:
     """Run bounded governed cycles inside the live Space process."""
-    if not SPACE_AUTONOMY_ENABLED or EMERGENCY_STOP:
+    if not SPACE_AUTONOMY_ENABLED or EMERGENCY_STOP or not may_run_cycles("space"):
         return
     while not _worker_stop.is_set():
         try:
@@ -72,7 +74,7 @@ def _autonomous_worker() -> None:
 
 def start_autonomous_worker() -> None:
     global _worker_thread
-    if _worker_thread is None and SPACE_AUTONOMY_ENABLED and not EMERGENCY_STOP:
+    if _worker_thread is None and SPACE_AUTONOMY_ENABLED and not EMERGENCY_STOP and may_run_cycles("space"):
         _worker_thread = threading.Thread(target=_autonomous_worker, name="ni-space-autonomy", daemon=True)
         _worker_thread.start()
 
@@ -87,6 +89,7 @@ def _markdown_error(payload: Dict[str, Any]) -> str:
 
 def overview_markdown() -> str:
     stats = _adapter().system_stats()
+    stats["coordination"] = coordination_status("space")
     if stats.get("error"):
         return _markdown_error(stats)
     core = _safe_mapping(stats.get("core"))
