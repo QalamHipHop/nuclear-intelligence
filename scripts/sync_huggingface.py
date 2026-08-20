@@ -108,6 +108,20 @@ def sync_hf_dataset(limit: int = 25) -> int:
                 except Exception as e:
                     logger.warning(f"Failed to upload {kb_file}: {e}")
 
+        queue_path = kb_dir / "developer_queue.md"
+        if queue_path.exists():
+            try:
+                api.upload_file(
+                    path_or_fileobj=str(queue_path),
+                    path_in_repo="knowledge_base/developer_queue.md",
+                    repo_id=dataset_repo,
+                    repo_type="dataset",
+                    commit_message="Auto: update developer queue",
+                )
+                logger.info("Uploaded autonomous developer queue")
+            except Exception as e:
+                logger.warning(f"Failed to upload developer queue: {e}")
+
         # Update README with latest stats
         try:
             ledger_path = kb_dir / "virtual_ledger.json"
@@ -230,6 +244,18 @@ def sync_github(limit: int = 10) -> int:
                         repo.create_file(path, f"Auto: add {kb_file}", content)
                 except Exception as e:
                     logger.warning(f"GH upload failed for {kb_file}: {e}")
+        queue_path = kb_dir / "developer_queue.md"
+        if queue_path.exists():
+            try:
+                content = queue_path.read_text(encoding="utf-8")
+                path = "knowledge_base/developer_queue.md"
+                try:
+                    existing = repo.get_contents(path)
+                    repo.update_file(path, "Auto: update developer queue", content, existing.sha)
+                except Exception:
+                    repo.create_file(path, "Auto: add developer queue", content)
+            except Exception as e:
+                logger.warning(f"GH developer queue upload failed: {e}")
         return 0
     except Exception as e:
         logger.error("GH sync error; inspect token scope and repository permissions")

@@ -82,7 +82,8 @@ def render(proposals: list[dict[str, str]]) -> str:
 
 def main() -> int:
     root = Path(os.getenv("NI_PROJECT_ROOT", Path.cwd())).resolve()
-    output = root / "reports" / "developer_queue.md"
+    # Keep the queue in a tracked path; reports/ is intentionally gitignored.
+    output = root / "knowledge_base" / "developer_queue.md"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(render(collect(root)), encoding="utf-8")
     print(output)
